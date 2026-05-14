@@ -15,26 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef DENSE_MATRIX_H
-#define DENSE_MATRIX_H
+#ifndef MATRIX_SUM_H
+#define MATRIX_SUM_H
 
 #include "matrix.h"
 
-/* Dense matrix (row-major) */
-typedef struct Dense_Matrix
-{
-    Matrix base;
-    double *x;
-    double *work; /* scratch buffer, length n */
-} Dense_Matrix;
+/* Polymorphic wrappers for allocating C = A + B. Right now we always
+   convert to CSR matrices internally for the sum. */
+void sum_matrices_alloc(matrix *A, matrix *B, matrix *C);
 
-/* Constructors. If data is NULL, the value buffer is allocated but left
-   uninitialized; otherwise m*n entries are copied from data. */
-Matrix *new_dense_matrix(int m, int n, const double *data);
+/* Fill values of C = A + B. Uses CSR matrices internally. */
+void sum_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 
-/* Transpose helper */
-Matrix *dense_matrix_trans(const Dense_Matrix *self);
+/* Fill values of C = diag(d1) * A + diag(d2) * B. Uses CSR matrices internally. */
+void sum_scaled_matrices_fill_values(matrix *A, matrix *B, matrix *C,
+                                     const double *d1, const double *d2);
 
-void A_transpose(double *AT, const double *A, int m, int n);
-
-#endif /* DENSE_MATRIX_H */
+#endif /* MATRIX_SUM_H */

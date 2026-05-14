@@ -15,21 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/CSC_Matrix.h"
-#include "utils/CSR_Matrix.h"
+#include "utils/CSC_matrix.h"
+#include "utils/CSR_matrix.h"
 #include "utils/cblas_wrapper.h"
-#include "utils/dense_matrix.h"
 #include "utils/iVec.h"
+#include "utils/linalg_dense_sparse_matmuls.h"
 #include "utils/tracked_alloc.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* ---------------------------------------------------------------
- * C = (I_p kron A) @ J  via the polymorphic Matrix interface.
- * A is dense m x n, J is (n*p) x k CSC, C is (m*p) x k CSC.
+ * C = (I_p kron A) @ J  via the polymorphic matrix interface.
+ * A is dense m x n, J is (n*p) x k CSC_matrix, C is (m*p) x k CSC_matrix.
  * --------------------------------------------------------------- */
-CSC_Matrix *I_kron_A_alloc(const Matrix *A, const CSC_Matrix *J, int p)
+CSC_matrix *I_kron_A_alloc(const matrix *A, const CSC_matrix *J, int p)
 {
     int m = A->m;
     int n = A->n;
@@ -82,7 +82,7 @@ CSC_Matrix *I_kron_A_alloc(const Matrix *A, const CSC_Matrix *J, int p)
         Cp[j + 1] = Ci->len;
     }
 
-    CSC_Matrix *C = new_csc_matrix(m * p, J->n, Ci->len);
+    CSC_matrix *C = new_CSC_matrix(m * p, J->n, Ci->len);
     memcpy(C->p, Cp, (J->n + 1) * sizeof(int));
     memcpy(C->i, Ci->data, Ci->len * sizeof(int));
     free(Cp);
@@ -91,16 +91,16 @@ CSC_Matrix *I_kron_A_alloc(const Matrix *A, const CSC_Matrix *J, int p)
     return C;
 }
 
-void I_kron_A_fill_values(const Matrix *A, const CSC_Matrix *J, CSC_Matrix *C)
+void I_kron_A_fill_values(const matrix *A, const CSC_matrix *J, CSC_matrix *C,
+                          double *work)
 {
-    const Dense_Matrix *dm = (const Dense_Matrix *) A;
-    int m = dm->base.m;
-    int n = dm->base.n;
+    int m = A->m;
+    int n = A->n;
     int k = J->n;
 
     int i, j, s, block, block_start, block_end, start, end;
 
-    double *j_dense = dm->work;
+    double *j_dense = work;
 
     /* for each column of J (and C) */
     for (j = 0; j < k; j++)
@@ -131,7 +131,7 @@ void I_kron_A_fill_values(const Matrix *A, const CSC_Matrix *J, CSC_Matrix *C)
                 /* Fast path: C column segment = val * A[:, row_in_block] */
                 int row_in_block = J->i[start] - block_start;
                 double val = J->x[start];
-                cblas_dcopy(m, dm->x + row_in_block, n, C->x + i, 1);
+                cblas_dcopy(m, A->x + row_in_block, n, C->x + i, 1);
                 if (val != 1.0)
                 {
                     cblas_dscal(m, val, C->x + i, 1);
@@ -147,7 +147,7 @@ void I_kron_A_fill_values(const Matrix *A, const CSC_Matrix *J, CSC_Matrix *C)
                     j_dense[J->i[s] - block_start] = J->x[s];
                 }
 
-                cblas_dgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, dm->x, n,
+                cblas_dgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, A->x, n,
                             j_dense, 1, 0.0, C->x + i, 1);
             }
         }
@@ -156,9 +156,9 @@ void I_kron_A_fill_values(const Matrix *A, const CSC_Matrix *J, CSC_Matrix *C)
 
 /* ---------------------------------------------------------------
  * C = (Y^T kron I_m) @ J
- * Y is k x n (col-major), J is (m*k) x p CSC, C is (m*n) x p CSR
+ * Y is k x n (col-major), J is (m*k) x p CSC_matrix, C is (m*n) x p CSR_matrix
  * --------------------------------------------------------------- */
-CSR_Matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_Matrix *J)
+CSR_matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_matrix *J)
 {
     (void) k;
     /* C has n blocks of m rows.  All rows at the same position within
@@ -198,7 +198,7 @@ CSR_Matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_Matrix *J)
     // ---------------------------------------------------------------
     //           replicate sparsity pattern across blocks
     // ---------------------------------------------------------------
-    CSR_Matrix *C = new_csr_matrix(m * n, J->n, total_nnz);
+    CSR_matrix *C = new_CSR_matrix(m * n, J->n, total_nnz);
     int idx = 0;
     for (i = 0; i < m * n; i++)
     {
@@ -219,8 +219,8 @@ CSR_Matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_Matrix *J)
     return C;
 }
 
-void YT_kron_I_fill_values(int m, int k, int n, const double *Y, const CSC_Matrix *J,
-                           CSR_Matrix *C)
+void YT_kron_I_fill_values(int m, int k, int n, const double *Y, const CSC_matrix *J,
+                           CSR_matrix *C)
 {
     (void) n;
     assert(C->m == m * n);
@@ -256,7 +256,7 @@ void YT_kron_I_fill_values(int m, int k, int n, const double *Y, const CSC_Matri
     }
 }
 
-CSR_Matrix *I_kron_X_alloc(int m, int k, int n, const CSC_Matrix *J)
+CSR_matrix *I_kron_X_alloc(int m, int k, int n, const CSC_matrix *J)
 {
     /* Step 1: for each block, find which columns of J have any
      *         nonzero in row range [blk*k, blk*k + k). */
@@ -287,7 +287,7 @@ CSR_Matrix *I_kron_X_alloc(int m, int k, int n, const CSC_Matrix *J)
 
     /* Step 2: replicate each block's pattern for all m rows
      *         within that block. */
-    CSR_Matrix *C = new_csr_matrix(m * n, J->n, total_nnz);
+    CSR_matrix *C = new_CSR_matrix(m * n, J->n, total_nnz);
     int idx = 0;
     for (i = 0; i < m * n; i++)
     {
@@ -308,8 +308,8 @@ CSR_Matrix *I_kron_X_alloc(int m, int k, int n, const CSC_Matrix *J)
     return C;
 }
 
-void I_kron_X_fill_values(int m, int k, int n, const double *X, const CSC_Matrix *J,
-                          CSR_Matrix *C)
+void I_kron_X_fill_values(int m, int k, int n, const double *X, const CSC_matrix *J,
+                          CSR_matrix *C)
 {
     (void) n;
     assert(C->m == m * n);
