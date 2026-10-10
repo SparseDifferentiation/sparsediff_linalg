@@ -18,7 +18,7 @@
 #ifndef PERMUTED_DENSE_H
 #define PERMUTED_DENSE_H
 
-#include "matrix.h"
+#include "sparse_linalg/matrix.h"
 #include <stdbool.h>
 #include <stddef.h>
 

@@ -18,7 +18,7 @@
 #ifndef CSC_matrix_H
 #define CSC_matrix_H
 
-#include "CSR_matrix.h"
+#include "sparse_linalg/CSR_matrix.h"
 
 /* CSC_matrix (Compressed Sparse Column) matrix Format
  *

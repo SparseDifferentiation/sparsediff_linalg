@@ -18,8 +18,8 @@
 #ifndef LINALG_H
 #define LINALG_H
 
-#include "CSC_matrix.h"
-#include "CSR_matrix.h"
+#include "sparse_linalg/CSC_matrix.h"
+#include "sparse_linalg/CSR_matrix.h"
 
 /* Compute sparsity pattern and values for the matrix-matrix multiplication
    C = (I_p kron A) @ J where A is m x n, J is (n*p) x k, and C is (m*p) x k,

@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/int_double_pair.h"
-#include "utils/tracked_alloc.h"
+#include "sparse_linalg/int_double_pair.h"
+#include "sparse_linalg/tracked_alloc.h"
 #include <stdlib.h>
 
 static int compare_int_double_pair(const void *a, const void *b)

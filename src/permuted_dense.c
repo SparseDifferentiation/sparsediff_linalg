@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/permuted_dense.h"
+#include "sparse_linalg/permuted_dense.h"
 
-#include "utils/cblas_wrapper.h"
-#include "utils/linalg_dense_sparse_matmuls.h"
-#include "utils/permuted_dense_linalg.h"
-#include "utils/tracked_alloc.h"
-#include "utils/utils.h"
+#include "sparse_linalg/cblas_wrapper.h"
+#include "sparse_linalg/linalg_dense_sparse_matmuls.h"
+#include "sparse_linalg/permuted_dense_linalg.h"
+#include "sparse_linalg/tracked_alloc.h"
+#include "sparse_linalg/utils.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>

@@ -18,7 +18,7 @@
 #ifndef SPARSE_MATRIX_H
 #define SPARSE_MATRIX_H
 
-#include "matrix.h"
+#include "sparse_linalg/matrix.h"
 
 /* Sparse matrix wrapping CSR_matrix. csc_cache is a lazily-built CSC_matrix mirror
    used by the chain-rule ATA / ATDA paths; it's allocated on first need and refilled

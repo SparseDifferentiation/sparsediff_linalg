@@ -9,16 +9,16 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
-#include "utils/matmul_dispatchers.h"
+#include "sparse_linalg/matmul_dispatchers.h"
 
-#include "utils/CSC_matrix.h"
-#include "utils/CSR_matrix.h"
-#include "utils/permuted_dense.h"
-#include "utils/permuted_dense_linalg.h"
-#include "utils/sparse_matrix.h"
-#include "utils/stacked_pd.h"
-#include "utils/stacked_pd_kron_linalg.h"
-#include "utils/stacked_pd_linalg.h"
+#include "sparse_linalg/CSC_matrix.h"
+#include "sparse_linalg/CSR_matrix.h"
+#include "sparse_linalg/permuted_dense.h"
+#include "sparse_linalg/permuted_dense_linalg.h"
+#include "sparse_linalg/sparse_matrix.h"
+#include "sparse_linalg/stacked_pd.h"
+#include "sparse_linalg/stacked_pd_kron_linalg.h"
+#include "sparse_linalg/stacked_pd_linalg.h"
 #include <assert.h>
 
 /* Forward declarations of the fixed-B dispatchers used internally by

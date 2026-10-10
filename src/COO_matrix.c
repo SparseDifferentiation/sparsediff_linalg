@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/COO_matrix.h"
-#include "utils/tracked_alloc.h"
+#include "sparse_linalg/COO_matrix.h"
+#include "sparse_linalg/tracked_alloc.h"
 #include <stdlib.h>
 #include <string.h>
 

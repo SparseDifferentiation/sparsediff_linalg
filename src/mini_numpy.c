@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/mini_numpy.h"
+#include "sparse_linalg/mini_numpy.h"
 #include <string.h>
 
 void repeat(double *result, const double *a, int len, int repeats)

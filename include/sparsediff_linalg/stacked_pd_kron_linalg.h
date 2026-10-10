@@ -18,10 +18,10 @@
 #ifndef STACKED_PD_KRON_LINALG_H
 #define STACKED_PD_KRON_LINALG_H
 
-#include "CSC_matrix.h"
-#include "matrix.h"
-#include "permuted_dense.h"
-#include "stacked_pd.h"
+#include "sparse_linalg/CSC_matrix.h"
+#include "sparse_linalg/matrix.h"
+#include "sparse_linalg/permuted_dense.h"
+#include "sparse_linalg/stacked_pd.h"
 
 /* All three families compute C = kron(I_p, A) @ J as a stacked_pd, without
    materializing kron(I_p, A).

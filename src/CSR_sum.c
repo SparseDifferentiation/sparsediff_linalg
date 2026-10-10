@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/CSR_sum.h"
-#include "utils/CSR_matrix.h"
-#include "utils/int_double_pair.h"
-#include "utils/tracked_alloc.h"
-#include "utils/utils.h"
+#include "sparse_linalg/CSR_sum.h"
+#include "sparse_linalg/CSR_matrix.h"
+#include "sparse_linalg/int_double_pair.h"
+#include "sparse_linalg/tracked_alloc.h"
+#include "sparse_linalg/utils.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

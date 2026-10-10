@@ -18,8 +18,8 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#include "CSC_matrix.h"
-#include "CSR_matrix.h"
+#include "sparse_linalg/CSC_matrix.h"
+#include "sparse_linalg/CSR_matrix.h"
 #include <stdbool.h>
 #include <stdint.h>
 

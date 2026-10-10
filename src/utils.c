@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/utils.h"
+#include "sparse_linalg/utils.h"
 
-#include "utils/iVec.h"
-#include "utils/tracked_alloc.h"
+#include "sparse_linalg/iVec.h"
+#include "sparse_linalg/tracked_alloc.h"
 #include <stdlib.h>
 
 /* Helper function to compare integers for qsort */

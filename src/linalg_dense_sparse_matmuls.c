@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/linalg_dense_sparse_matmuls.h"
-#include "utils/CSC_matrix.h"
-#include "utils/CSR_matrix.h"
-#include "utils/cblas_wrapper.h"
-#include "utils/iVec.h"
-#include "utils/tracked_alloc.h"
+#include "sparse_linalg/linalg_dense_sparse_matmuls.h"
+#include "sparse_linalg/CSC_matrix.h"
+#include "sparse_linalg/CSR_matrix.h"
+#include "sparse_linalg/cblas_wrapper.h"
+#include "sparse_linalg/iVec.h"
+#include "sparse_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

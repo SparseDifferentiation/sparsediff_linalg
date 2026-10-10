@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/sparse_matrix.h"
+#include "sparse_linalg/sparse_matrix.h"
 
-#include "utils/CSC_matrix.h"
-#include "utils/CSR_sum.h"
-#include "utils/linalg_sparse_matmuls.h"
-#include "utils/matrix.h"
-#include "utils/mini_numpy.h"
-#include "utils/tracked_alloc.h"
-#include "utils/utils.h"
+#include "sparse_linalg/CSC_matrix.h"
+#include "sparse_linalg/CSR_sum.h"
+#include "sparse_linalg/linalg_sparse_matmuls.h"
+#include "sparse_linalg/matrix.h"
+#include "sparse_linalg/mini_numpy.h"
+#include "sparse_linalg/tracked_alloc.h"
+#include "sparse_linalg/utils.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

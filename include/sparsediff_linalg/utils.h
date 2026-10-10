@@ -18,7 +18,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "iVec.h"
+#include "sparse_linalg/iVec.h"
 #include <limits.h>
 #include <stdbool.h>
 

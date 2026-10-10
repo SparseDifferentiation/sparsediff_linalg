@@ -18,9 +18,9 @@
 #ifndef STACKED_PD_H
 #define STACKED_PD_H
 
-#include "CSR_matrix.h"
-#include "matrix.h"
-#include "permuted_dense.h"
+#include "sparse_linalg/CSR_matrix.h"
+#include "sparse_linalg/matrix.h"
+#include "sparse_linalg/permuted_dense.h"
 
 /* stacked_pd represents a matrix that is the (vertical) union of 'n_blocks'
    permuted_dense blocks. Two different blocks have disjoint row permutations,
