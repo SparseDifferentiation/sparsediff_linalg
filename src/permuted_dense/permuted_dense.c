@@ -53,13 +53,6 @@ static void permuted_dense_free(matrix *self)
     sp_free(pd);
 }
 
-/* permuted_dense has no CSC_matrix mirror; chain-rule kernels operate on X directly.
- */
-static void permuted_dense_refresh_csc_values(matrix *self)
-{
-    (void) self;
-}
-
 /* Vtable adapters — each delegates to the existing permuted_dense_* kernel. */
 static matrix *permuted_dense_vtable_copy_sparsity(const matrix *self)
 {
@@ -70,6 +63,7 @@ static void permuted_dense_vtable_DA_fill_values(const double *d, const matrix *
                                                  matrix *out)
 {
     DA_pd_fill_values(d, (const permuted_dense *) self, (permuted_dense *) out);
+    matrix_values_changed(out);
 }
 
 static matrix *permuted_dense_vtable_ATA_alloc(matrix *self)
@@ -81,6 +75,7 @@ static void permuted_dense_vtable_ATDA_fill_values(const matrix *self,
                                                    const double *d, matrix *out)
 {
     ATDA_pd_fill_values((const permuted_dense *) self, d, (permuted_dense *) out);
+    matrix_values_changed(out);
 }
 
 /* Forward decl; definition lower in the file. */
@@ -108,6 +103,7 @@ static void permuted_dense_vtable_transpose_fill_values(const matrix *self,
                                                         matrix *out)
 {
     transpose_pd_fill_values((const permuted_dense *) self, (permuted_dense *) out);
+    matrix_values_changed(out);
 }
 
 matrix *row_gather_pd_alloc(const permuted_dense *A, const int *map, int m_out)
@@ -162,6 +158,7 @@ static void permuted_dense_vtable_row_gather_fill_values(const matrix *self,
                                                          matrix *out)
 {
     row_gather_pd_fill_values((const permuted_dense *) self, (permuted_dense *) out);
+    matrix_values_changed(out);
 }
 
 matrix *diag_vec_pd_alloc(const permuted_dense *A)
@@ -203,6 +200,7 @@ static matrix *permuted_dense_vtable_diag_vec_alloc(matrix *self)
 static void permuted_dense_vtable_diag_vec_fill_values(matrix *self, matrix *out)
 {
     diag_vec_pd_fill_values((const permuted_dense *) self, (permuted_dense *) out);
+    matrix_values_changed(out);
 }
 
 /* ===== Operator-role adapters: PD acting as the constant left operand of
@@ -322,6 +320,7 @@ static void permuted_dense_vtable_row_reduce_fill_values(const matrix *self,
                                                          matrix *out)
 {
     row_reduce_pd_fill_values((const permuted_dense *) self, (permuted_dense *) out);
+    matrix_values_changed(out);
 }
 
 static void wire_vtable(permuted_dense *pd)
@@ -345,7 +344,6 @@ static void wire_vtable(permuted_dense *pd)
     pd->base.diag_vec_fill_values = permuted_dense_vtable_diag_vec_fill_values;
     pd->base.row_reduce_alloc = permuted_dense_vtable_row_reduce_alloc;
     pd->base.row_reduce_fill_values = permuted_dense_vtable_row_reduce_fill_values;
-    pd->base.refresh_csc_values = permuted_dense_refresh_csc_values;
 }
 
 matrix *new_permuted_dense(int m, int n, int m0, int n0, const int *row_perm,

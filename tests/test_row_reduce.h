@@ -88,7 +88,6 @@ static const char *row_reduce_check_against_twin(matrix *A, const int *group,
     row_reduce_poison(C);
     A->row_reduce_fill_values(A, C);
     A_tw->row_reduce_fill_values(A_tw, C_tw);
-    matrix_values_changed(C);
     int ok = row_reduce_same_csr(C, C_tw);
 
     for (int k = 0; k < A->nnz; k++) A->x[k] *= 2.0;
@@ -96,7 +95,6 @@ static const char *row_reduce_check_against_twin(matrix *A, const int *group,
     matrix_values_changed(A);
     A->row_reduce_fill_values(A, C);
     A_tw->row_reduce_fill_values(A_tw, C_tw);
-    matrix_values_changed(C);
     int ok_refill = row_reduce_same_csr(C, C_tw);
 
     free_matrix(C_tw);

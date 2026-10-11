@@ -96,6 +96,10 @@ matrix *new_permuted_dense_full(int m, int n, const double *data);
    place; contents are NOT preserved. */
 void permuted_dense_ensure_kernel_dwork(const permuted_dense *A, size_t size);
 
+/* Raw per-kind kernels. They are also used blockwise by stacked_pd, whose
+   blocks carry no values_version of their own, so unlike the vtable fills
+   these fills do NOT bump C's values_version; the caller owning C does. */
+
 /* Allocate C = A[map, :], where A and C are permuted dense. C stores map
    internally, so the fill takes none. */
 matrix *row_gather_pd_alloc(const permuted_dense *A, const int *map, int m_out);

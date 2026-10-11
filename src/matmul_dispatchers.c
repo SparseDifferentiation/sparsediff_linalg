@@ -12,6 +12,7 @@
 #include "sparsediff_linalg/matmul_dispatchers.h"
 
 #include "internal/permuted_dense_linalg.h"
+#include "internal/sparse_matrix_cache.h"
 #include "internal/stacked_pd_kron_linalg.h"
 #include "internal/stacked_pd_linalg.h"
 #include "sparsediff_linalg/CSC_matrix.h"
@@ -59,16 +60,18 @@ void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C)
     {
         BTDA_pd_matrices_fill_values((const permuted_dense *) B, d, A,
                                      (permuted_dense *) C);
-        return;
     }
-    if (B->kind == MATRIX_STACKED_PD)
+    else if (B->kind == MATRIX_STACKED_PD)
     {
         BTDA_spd_matrices_fill_values((const stacked_pd *) B, d, A,
                                       (stacked_pd *) C);
-        return;
     }
-    /* B is sparse_matrix */
-    BTDA_sparse_matrices_fill_values((const sparse_matrix *) B, d, A, C);
+    else
+    {
+        /* B is sparse_matrix */
+        BTDA_sparse_matrices_fill_values((const sparse_matrix *) B, d, A, C);
+    }
+    matrix_values_changed(C);
 }
 
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C)
@@ -77,15 +80,17 @@ void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C)
     {
         BTA_pd_matrices_fill_values((const permuted_dense *) B, A,
                                     (permuted_dense *) C);
-        return;
     }
-    if (B->kind == MATRIX_STACKED_PD)
+    else if (B->kind == MATRIX_STACKED_PD)
     {
         BTA_spd_matrices_fill_values((const stacked_pd *) B, A, (stacked_pd *) C);
-        return;
     }
-    /* B is sparse_matrix */
-    BTA_sparse_matrices_fill_values((const sparse_matrix *) B, A, C);
+    else
+    {
+        /* B is sparse_matrix */
+        BTA_sparse_matrices_fill_values((const sparse_matrix *) B, A, C);
+    }
+    matrix_values_changed(C);
 }
 
 matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
@@ -111,17 +116,17 @@ void BA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
         BA_pd_pd_fill_values(B, (const permuted_dense *) A, C);
-        return;
     }
-    if (A->kind == MATRIX_STACKED_PD)
+    else if (A->kind == MATRIX_STACKED_PD)
     {
         BA_pd_spd_fill_values(B, (const stacked_pd *) A, C);
-        return;
     }
-
-    /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BA_pd_csc_fill_values(B->X, B->n0, B->col_inv, sm_A->csc_cache, C);
+    else
+    {
+        /* A is sparse */
+        BA_pd_csc_fill_values(B->X, B->n0, B->col_inv, sparse_csc_fresh(A), C);
+    }
+    matrix_values_changed(&C->base);
 }
 
 static matrix *BTA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
@@ -156,8 +161,7 @@ static void BTDA_pd_matrices_fill_values(const permuted_dense *B, const double *
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BTDA_pd_csc_fill_values(B, d, sm_A->csc_cache, C);
+    BTDA_pd_csc_fill_values(B, d, sparse_csc_fresh(A), C);
 }
 
 static void BTA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
@@ -175,8 +179,7 @@ static void BTA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BTA_pd_csc_fill_values(B, sm_A->csc_cache, C);
+    BTA_pd_csc_fill_values(B, sparse_csc_fresh(A), C);
 }
 
 static matrix *BTA_spd_matrices_alloc(const stacked_pd *B, matrix *A)
@@ -211,8 +214,7 @@ static void BTDA_spd_matrices_fill_values(const stacked_pd *B, const double *d,
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BTDA_spd_csc_fill_values(B, d, sm_A->csc_cache, C);
+    BTDA_spd_csc_fill_values(B, d, sparse_csc_fresh(A), C);
 }
 
 static void BTA_spd_matrices_fill_values(const stacked_pd *B, const matrix *A,
@@ -230,8 +232,7 @@ static void BTA_spd_matrices_fill_values(const stacked_pd *B, const matrix *A,
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BTA_spd_csc_fill_values(B, sm_A->csc_cache, C);
+    BTA_spd_csc_fill_values(B, sparse_csc_fresh(A), C);
 }
 
 static matrix *BTA_sparse_matrices_alloc(const sparse_matrix *B, matrix *A)
@@ -259,44 +260,41 @@ static matrix *BTA_sparse_matrices_alloc(const sparse_matrix *B, matrix *A)
 static void BTDA_sparse_matrices_fill_values(const sparse_matrix *B, const double *d,
                                              const matrix *A, matrix *C)
 {
+    const CSC_matrix *B_csc = sparse_csc_fresh(&B->base);
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
-        BTDA_csc_pd_fill_values(B->csc_cache, d, (const permuted_dense *) A,
+        BTDA_csc_pd_fill_values(B_csc, d, (const permuted_dense *) A,
                                 (permuted_dense *) C);
         return;
     }
     if (A->kind == MATRIX_STACKED_PD)
     {
-        BTDA_csc_spd_fill_values(B->csc_cache, d, (const stacked_pd *) A,
-                                 (stacked_pd *) C);
+        BTDA_csc_spd_fill_values(B_csc, d, (const stacked_pd *) A, (stacked_pd *) C);
         return;
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BTDA_fill_values(sm_A->csc_cache, B->csc_cache, d, ((sparse_matrix *) C)->csr);
+    BTDA_fill_values(sparse_csc_fresh(A), B_csc, d, ((sparse_matrix *) C)->csr);
 }
 
 static void BTA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix *A,
                                             matrix *C)
 {
+    const CSC_matrix *B_csc = sparse_csc_fresh(&B->base);
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
-        BTA_csc_pd_fill_values(B->csc_cache, (const permuted_dense *) A,
+        BTA_csc_pd_fill_values(B_csc, (const permuted_dense *) A,
                                (permuted_dense *) C);
         return;
     }
     if (A->kind == MATRIX_STACKED_PD)
     {
-        BTA_csc_spd_fill_values(B->csc_cache, (const stacked_pd *) A,
-                                (stacked_pd *) C);
+        BTA_csc_spd_fill_values(B_csc, (const stacked_pd *) A, (stacked_pd *) C);
         return;
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    BTDA_fill_values(sm_A->csc_cache, B->csc_cache, NULL,
-                     ((sparse_matrix *) C)->csr);
+    BTDA_fill_values(sparse_csc_fresh(A), B_csc, NULL, ((sparse_matrix *) C)->csr);
 }
 
 /* Debug-only check that A is the "full" permuted_dense shape the kron
@@ -339,14 +337,15 @@ void BA_dense_kron_matrices_fill_values(const permuted_dense *A, int p,
     if (J->kind == MATRIX_PERMUTED_DENSE)
     {
         BA_dense_kron_pd_fill_values(A, p, (const permuted_dense *) J, C);
-        return;
     }
-    if (J->kind == MATRIX_STACKED_PD)
+    else if (J->kind == MATRIX_STACKED_PD)
     {
         BA_dense_kron_spd_fill_values(A, p, (const stacked_pd *) J, C);
-        return;
     }
-    /* J is sparse */
-    const sparse_matrix *sm_J = (const sparse_matrix *) J;
-    BA_dense_kron_csc_fill_values(A, p, sm_J->csc_cache, C);
+    else
+    {
+        /* J is sparse */
+        BA_dense_kron_csc_fill_values(A, p, sparse_csc_fresh(J), C);
+    }
+    matrix_values_changed(&C->base);
 }

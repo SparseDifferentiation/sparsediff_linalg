@@ -9,6 +9,7 @@
    kernels live in the engine's tests/old-code and run from all_tests. */
 #include "test_COO_matrix.h"
 #include "test_alloc_overflow.h"
+#include "test_cache_coherence.h"
 #include "test_cblas.h"
 #include "test_csc_matrix.h"
 #include "test_csr_csc_conversion.h"
@@ -190,13 +191,19 @@ int main(void)
     mu_run_test(test_spd_vtable_ATA_alloc, tests_run);
     mu_run_test(test_spd_vtable_ATDA_fill_values, tests_run);
     mu_run_test(test_spd_vtable_transpose, tests_run);
-    mu_run_test(test_spd_vtable_refresh_csc_values_noop, tests_run);
     mu_run_test(test_spd_vtable_row_gather, tests_run);
     mu_run_test(test_spd_vtable_diag_vec, tests_run);
     mu_run_test(test_YT_kron_I, tests_run);
     mu_run_test(test_YT_kron_I_larger, tests_run);
     mu_run_test(test_I_kron_X, tests_run);
     mu_run_test(test_I_kron_X_larger, tests_run);
+
+    mu_run_test(test_fills_refresh_sparse_operands_BTA, tests_run);
+    mu_run_test(test_fills_refresh_sparse_operands_BTDA, tests_run);
+    mu_run_test(test_fill_refreshes_sparse_operand_BA_pd, tests_run);
+    mu_run_test(test_fill_refreshes_sparse_operand_kron, tests_run);
+    mu_run_test(test_fill_refreshes_sparse_operand_ATDA, tests_run);
+    mu_run_test(test_public_fills_bump_output, tests_run);
 
     printf("\n=== All %d sparsediff_linalg tests passed ===\n", tests_run);
     return 0;
