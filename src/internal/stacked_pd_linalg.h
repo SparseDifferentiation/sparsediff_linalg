@@ -18,8 +18,8 @@
 #ifndef STACKED_PD_LINALG_H
 #define STACKED_PD_LINALG_H
 
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/stacked_pd.h"
+#include "internal/permuted_dense.h"
+#include "internal/stacked_pd.h"
 
 /* Allocate a new spd C with the same sparsity as A. */
 matrix *copy_sparsity_spd_alloc(const stacked_pd *A);

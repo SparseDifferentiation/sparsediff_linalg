@@ -18,9 +18,9 @@
 #ifndef SPARSE_MATRIX_CACHE_H
 #define SPARSE_MATRIX_CACHE_H
 
+#include "internal/sparse_matrix.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/matrix.h"
-#include "sparsediff_linalg/sparse_matrix.h"
 
 /* The sparse kind keeps a lazily built CSC mirror of its CSR values for the
    kernels that consume CSC. Two accessors, one per phase:

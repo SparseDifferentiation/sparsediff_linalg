@@ -11,15 +11,15 @@
  */
 #include "sparsediff_linalg/matmul_dispatchers.h"
 
+#include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
+#include "internal/sparse_matrix.h"
 #include "internal/sparse_matrix_cache.h"
+#include "internal/stacked_pd.h"
 #include "internal/stacked_pd_kron_linalg.h"
 #include "internal/stacked_pd_linalg.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/sparse_matrix.h"
-#include "sparsediff_linalg/stacked_pd.h"
 #include <assert.h>
 
 /* Forward declarations of the fixed-B dispatchers used internally by
@@ -54,8 +54,20 @@ matrix *BTA_matrices_alloc(matrix *A, matrix *B)
     return BTA_sparse_matrices_alloc((const sparse_matrix *) B, A);
 }
 
+/* The output kind an alloc produced for (B, A): B PD -> PD, B spd -> spd,
+   B sparse -> A's kind. Used by the fills' kind asserts. */
+#ifndef NDEBUG
+static matrix_kind BTA_output_kind(const matrix *A, const matrix *B)
+{
+    if (B->kind == MATRIX_PERMUTED_DENSE) return MATRIX_PERMUTED_DENSE;
+    if (B->kind == MATRIX_STACKED_PD) return MATRIX_STACKED_PD;
+    return A->kind;
+}
+#endif
+
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C)
 {
+    assert(C->kind == BTA_output_kind(A, B));
     if (B->kind == MATRIX_PERMUTED_DENSE)
     {
         BTDA_pd_matrices_fill_values((const permuted_dense *) B, d, A,
@@ -76,6 +88,7 @@ void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C)
 
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C)
 {
+    assert(C->kind == BTA_output_kind(A, B));
     if (B->kind == MATRIX_PERMUTED_DENSE)
     {
         BTA_pd_matrices_fill_values((const permuted_dense *) B, A,
@@ -93,8 +106,10 @@ void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C)
     matrix_values_changed(C);
 }
 
-matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
+matrix *BA_pd_matrices_alloc(const matrix *B_m, matrix *A)
 {
+    assert(B_m->kind == MATRIX_PERMUTED_DENSE);
+    const permuted_dense *B = (const permuted_dense *) B_m;
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
         return BA_pd_pd_alloc(B, (const permuted_dense *) A);
@@ -110,9 +125,12 @@ matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
     return BA_pd_csc_alloc(B, sm_A->csc_cache);
 }
 
-void BA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
-                                permuted_dense *C)
+void BA_pd_matrices_fill_values(const matrix *B_m, const matrix *A, matrix *C_m)
 {
+    assert(B_m->kind == MATRIX_PERMUTED_DENSE);
+    assert(C_m->kind == MATRIX_PERMUTED_DENSE);
+    const permuted_dense *B = (const permuted_dense *) B_m;
+    permuted_dense *C = (permuted_dense *) C_m;
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
         BA_pd_pd_fill_values(B, (const permuted_dense *) A, C);
@@ -297,13 +315,13 @@ static void BTA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix
     BTDA_fill_values(sparse_csc_fresh(A), B_csc, NULL, ((sparse_matrix *) C)->csr);
 }
 
-/* Debug-only check that A is the "full" permuted_dense shape the kron
-   helpers require: m0 == base.m, n0 == base.n, identity inner perms.
-   Called once at alloc; not repeated at fill (caller would have to
-   reuse the same A). */
+/* Debug-only check that A is a permuted_dense of the "full" shape the kron
+   helpers require: m0 == base.m, n0 == base.n, identity inner perms. */
 #ifndef NDEBUG
-static void assert_dense_kron_A_is_full(const permuted_dense *A)
+static void assert_dense_kron_A_is_full(const matrix *A_m)
 {
+    assert(A_m->kind == MATRIX_PERMUTED_DENSE);
+    const permuted_dense *A = (const permuted_dense *) A_m;
     assert(A->m0 == A->base.m);
     assert(A->n0 == A->base.n);
     for (int i = 0; i < A->m0; i++) assert(A->row_perm[i] == i);
@@ -311,11 +329,12 @@ static void assert_dense_kron_A_is_full(const permuted_dense *A)
 }
 #endif
 
-matrix *BA_dense_kron_matrices_alloc(const permuted_dense *A, int p, matrix *J)
+matrix *BA_dense_kron_matrices_alloc(const matrix *A_m, int p, matrix *J)
 {
 #ifndef NDEBUG
-    assert_dense_kron_A_is_full(A);
+    assert_dense_kron_A_is_full(A_m);
 #endif
+    const permuted_dense *A = (const permuted_dense *) A_m;
 
     if (J->kind == MATRIX_PERMUTED_DENSE)
     {
@@ -331,9 +350,15 @@ matrix *BA_dense_kron_matrices_alloc(const permuted_dense *A, int p, matrix *J)
     return BA_dense_kron_csc_alloc(A, p, sm_J->csc_cache);
 }
 
-void BA_dense_kron_matrices_fill_values(const permuted_dense *A, int p,
-                                        const matrix *J, stacked_pd *C)
+void BA_dense_kron_matrices_fill_values(const matrix *A_m, int p, const matrix *J,
+                                        matrix *C_m)
 {
+#ifndef NDEBUG
+    assert_dense_kron_A_is_full(A_m);
+#endif
+    assert(C_m->kind == MATRIX_STACKED_PD);
+    const permuted_dense *A = (const permuted_dense *) A_m;
+    stacked_pd *C = (stacked_pd *) C_m;
     if (J->kind == MATRIX_PERMUTED_DENSE)
     {
         BA_dense_kron_pd_fill_values(A, p, (const permuted_dense *) J, C);

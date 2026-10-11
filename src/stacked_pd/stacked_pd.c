@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/stacked_pd.h"
+#include "internal/stacked_pd.h"
 
 #include "internal/stacked_pd_linalg.h"
 #include "sparsediff_linalg/matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/sparse_matrix.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include "sparsediff_linalg/utils.h"
 #include <assert.h>
@@ -196,9 +194,11 @@ matrix *spd_map_filter_blocks(const stacked_pd *B, int Cm, int Cn, spd_block_op 
     return C;
 }
 
-void compose_csr_idx_map_for_spd(const stacked_pd *spd, const CSR_matrix *csr,
+void compose_csr_idx_map_for_spd(const matrix *spd_m, const CSR_matrix *csr,
                                  int *idx_map)
 {
+    assert(spd_m->kind == MATRIX_STACKED_PD);
+    const stacked_pd *spd = (const stacked_pd *) spd_m;
     /* spd's base.x is block-major (block 0's m0*n0 values, then block 1's,
        ...); csr->x is row-major sorted. Because spd blocks have pairwise-
        disjoint row perms and stacked_pd_to_csr_alloc memcpys each block's

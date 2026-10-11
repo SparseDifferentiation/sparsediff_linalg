@@ -1,6 +1,9 @@
 #ifndef TEST_ROW_GATHER_H
 #define TEST_ROW_GATHER_H
 
+#include "internal/permuted_dense.h"
+#include "internal/sparse_matrix.h"
+#include "internal/stacked_pd.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/permuted_dense.h"

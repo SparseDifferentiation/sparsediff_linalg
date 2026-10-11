@@ -17,11 +17,11 @@
  */
 #include "internal/stacked_pd_linalg.h"
 
+#include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
+#include "internal/stacked_pd.h"
 #include "sparsediff_linalg/cblas_wrapper.h"
 #include "sparsediff_linalg/iVec.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/stacked_pd.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include "sparsediff_linalg/utils.h"
 #include <assert.h>

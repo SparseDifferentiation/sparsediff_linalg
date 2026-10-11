@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/sparse_matrix.h"
+#include "internal/sparse_matrix.h"
 #include "internal/sparse_matrix_cache.h"
 
 #include "sparsediff_linalg/CSC_matrix.h"
@@ -391,17 +391,4 @@ void sparse_matrix_trim(matrix *M)
     CSR_trim(csr);
     M->x = csr->x;
     M->nnz = csr->nnz;
-}
-
-matrix *sparse_matrix_trans(const sparse_matrix *self, int *iwork)
-{
-    CSR_matrix *AT = transpose(self->csr, iwork);
-    sparse_matrix *sm = (sparse_matrix *) sp_calloc(1, sizeof(sparse_matrix));
-    sm->base.m = AT->m;
-    sm->base.n = AT->n;
-    sm->base.nnz = AT->nnz;
-    sm->base.x = AT->x;
-    wire_vtable(sm);
-    sm->csr = AT;
-    return &sm->base;
 }

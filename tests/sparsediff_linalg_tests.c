@@ -4,9 +4,9 @@
 
 /* Library-only suite: this executable links sparsediff_linalg alone, so every
    header below may include only sparsediff_linalg/<name>.h, internal/<name>.h,
-   minunit.h, test_helpers.h and sibling test_<name>.h files (checked at
-   configure time in ../CMakeLists.txt). Tests that need old-code or engine
-   kernels live in the engine's tests/old-code and run from all_tests. */
+   legacy/<name>.h, minunit.h, test_helpers.h and sibling test_<name>.h files
+   (checked at configure time in ../CMakeLists.txt). tests/legacy holds the
+   retired CSR-era kernels, compiled into this executable only, as oracles. */
 #include "test_COO_matrix.h"
 #include "test_alloc_overflow.h"
 #include "test_cache_coherence.h"
@@ -22,6 +22,9 @@
 #include "test_row_gather.h"
 #include "test_row_reduce.h"
 #include "test_stacked_pd.h"
+
+#include "legacy/test_old_CSR.h"
+#include "legacy/test_old_permuted_dense.h"
 
 int main(void)
 {
@@ -204,6 +207,24 @@ int main(void)
     mu_run_test(test_fill_refreshes_sparse_operand_kron, tests_run);
     mu_run_test(test_fill_refreshes_sparse_operand_ATDA, tests_run);
     mu_run_test(test_public_fills_bump_output, tests_run);
+
+    printf("\n--- Legacy oracle tests ---\n");
+    mu_run_test(test_diag_csr_mult, tests_run);
+    mu_run_test(test_csr_sum, tests_run);
+    mu_run_test(test_csr_sum2, tests_run);
+    mu_run_test(test_kron_identity_csr, tests_run);
+    mu_run_test(test_csr_vecmat_values_sparse, tests_run);
+    mu_run_test(test_sum_all_rows_csr, tests_run);
+    mu_run_test(test_sum_block_of_rows_csr, tests_run);
+    mu_run_test(test_sum_evenly_spaced_rows_csr, tests_run);
+    mu_run_test(test_BTA_pd_csc_matches_csr, tests_run);
+    mu_run_test(test_BTA_pd_csr_basic, tests_run);
+    mu_run_test(test_BTA_pd_csr_leaf_variable, tests_run);
+    mu_run_test(test_BTA_pd_csr_no_overlap, tests_run);
+    mu_run_test(test_BTA_csr_pd_basic, tests_run);
+    mu_run_test(test_BTA_csr_pd_leaf_variable, tests_run);
+    mu_run_test(test_BTA_csr_pd_no_overlap, tests_run);
+    mu_run_test(test_BTDA_matrices_csr_pd, tests_run);
 
     printf("\n=== All %d sparsediff_linalg tests passed ===\n", tests_run);
     return 0;

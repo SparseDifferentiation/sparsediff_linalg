@@ -15,10 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/stacked_pd.h"
+#include "internal/stacked_pd.h"
 
 #include "sparsediff_linalg/iVec.h"
-#include "sparsediff_linalg/permuted_dense.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include "sparsediff_linalg/utils.h"
 #include <assert.h>

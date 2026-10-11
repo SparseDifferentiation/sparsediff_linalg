@@ -20,41 +20,17 @@
 
 #include "sparsediff_linalg/matrix.h"
 
-/* Sparse matrix wrapping CSR_matrix. csc_cache is a lazily-built CSC_matrix mirror
-   used by the kernels that consume CSC (ATA / ATDA and the matmul dispatchers);
-   it's allocated on first need and refilled by the fills that read it, guarded by
-   csc_seen against base.values_version. csc_iwork is the workspace for
-   csr_to_csc. */
-typedef struct sparse_matrix
-{
-    matrix base;
-    CSR_matrix *csr;
-    CSC_matrix *csc_cache;
-    uint64_t csc_seen; /* base.values_version the csc_cache values reflect */
-    int *csc_iwork;
-    /* Int state bound by the alloc that produced this matrix and read by the
-       matching fill: transpose_alloc stores csr->n scratch for
-       transpose_fill_values; row_gather_alloc stores the base.m-long row map
-       for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
-       position map for row_reduce_fill_values. NULL otherwise; never touched
-       by any other kernel. */
-    int *bound_iwork;
-} sparse_matrix;
+/* The sparse kind: a matrix backed by a CSR_matrix. Its layout is private; use
+   the matrix handle (m, n, nnz, x, kind, values_version, to_csr and the other
+   vtable slots). */
 
 /* Constructor. Takes ownership of A; the caller must not free A separately
    (free_matrix on the returned matrix frees A). */
 matrix *new_sparse_matrix(CSR_matrix *A);
 
-/* Convenience: allocate a sparse_matrix of shape (m, n) with capacity for
+/* Convenience: allocate a sparse matrix of shape (m, n) with capacity for
    nnz entries. Equivalent to new_sparse_matrix(new_CSR_matrix(m, n, nnz)).
    Sparsity pattern and values are uninitialized. */
 matrix *new_sparse_matrix_alloc(int m, int n, int nnz);
-
-/* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync
-   the base's cached x pointer and nnz, since realloc may move the buffer. */
-void sparse_matrix_trim(matrix *M);
-
-/* Transpose helper */
-matrix *sparse_matrix_trans(const sparse_matrix *self, int *iwork);
 
 #endif /* SPARSE_MATRIX_H */
