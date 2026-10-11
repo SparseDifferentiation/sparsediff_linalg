@@ -2,6 +2,7 @@
 #define TEST_MATMUL_DISPATCHERS_H
 
 #include "internal/permuted_dense_linalg.h"
+#include "internal/sparse_matrix_cache.h"
 #include "internal/stacked_pd_linalg.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
@@ -77,11 +78,8 @@ const char *test_BTDA_matrices_pd_csr(void)
 
     double d[4] = {1.0, -2.0, 0.5, 3.0};
 
-    /* Wrapper path. Dispatchers don't touch sparse_matrix internals — caller
-       owns csc_cache structure and values. */
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) B_m);
+    /* Wrapper path. */
     matrix *C_m = BTA_matrices_alloc(A_m, B_m);
-    B_m->refresh_csc_values(B_m);
     BTDA_matrices_fill_values(A_m, d, B_m, C_m);
 
     /* Direct primitive path: production now dispatches the (PD, Sparse)
@@ -176,8 +174,6 @@ const char *test_BTA_csc_pd_basic(void)
     memcpy(B_csr2->x, Bx, sizeof Bx);
     matrix *B_sparse = new_sparse_matrix(B_csr2);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -236,8 +232,6 @@ const char *test_BTA_csc_pd_partial_and_excluded_cols(void)
     memcpy(B_csr2->x, Bx, sizeof Bx);
     matrix *B_sparse = new_sparse_matrix(B_csr2);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -293,8 +287,6 @@ const char *test_BTA_csc_pd_empty(void)
     memcpy(B_csr2->x, Bx, sizeof Bx);
     matrix *B_sparse = new_sparse_matrix(B_csr2);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -357,8 +349,6 @@ const char *test_BTA_pd_csc_basic(void)
     memcpy(A_csr2->x, Ax, sizeof Ax);
     matrix *A_sparse = new_sparse_matrix(A_csr2);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -417,8 +407,6 @@ const char *test_BTA_pd_csc_partial_and_excluded_cols(void)
     memcpy(A_csr2->x, Ax, sizeof Ax);
     matrix *A_sparse = new_sparse_matrix(A_csr2);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -474,8 +462,6 @@ const char *test_BTA_pd_csc_empty(void)
     memcpy(A_csr2->x, Ax, sizeof Ax);
     matrix *A_sparse = new_sparse_matrix(A_csr2);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -532,7 +518,6 @@ const char *test_BTDA_matrices_spd_pd(void)
     /* Route 2: dispatcher with the same matrix expressed as sparse. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B);
-    A_sparse->refresh_csc_values(A_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B, C_ref);
 
     /* Both routes produce a PD (B is PD). Compare X buffers. */
@@ -586,7 +571,6 @@ const char *test_BTDA_matrices_pd_spd(void)
 
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A, d, B_sparse, C_ref);
 
     /* Output types now differ: the spd-B route returns stacked_pd (via
@@ -648,8 +632,6 @@ const char *test_BTDA_matrices_spd_spd(void)
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B_sparse, C_ref);
 
     /* Output types differ: spd-spd route returns stacked_pd, sparse-sparse
@@ -708,7 +690,6 @@ const char *test_BTA_pd_spd_two_blocks_both_kept(void)
     /* Route 2: dispatcher with A flattened to sparse_matrix, d = ones. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B);
-    A_sparse->refresh_csc_values(A_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B, C_ref);
 
@@ -774,7 +755,6 @@ const char *test_BTDA_pd_spd_two_blocks_both_kept(void)
     /* Route 2: dispatcher with A flattened to sparse_matrix. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B);
-    A_sparse->refresh_csc_values(A_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B, C_ref);
 
     /* Both routes produce a PD with row_perm = B->col_perm and col_perm
@@ -841,7 +821,6 @@ const char *test_BTDA_spd_pd_overlapping_cp(void)
        BTA_matrices_alloc(A, B) computes B^T @ A, so A goes first. */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A, d, B_sparse, C_ref);
 
     /* C_ours is stacked_pd, C_ref is permuted_dense — compare via to_csr.
@@ -900,7 +879,6 @@ const char *test_BTA_spd_pd_overlapping_cp(void)
        first. */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A, d_ones, B_sparse, C_ref);
 
@@ -963,20 +941,16 @@ const char *test_BTDA_spd_csc_overlapping_cp(void)
     /* Non-trivial d so BTDA != BTA. */
     double d[4] = {2.0, -1.5, 0.5, 1.25};
 
-    /* Route 1: our new BTDA_spd_csc_fill_values. Need A's csc_cache. */
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) A_sm);
-    A_sm->refresh_csc_values(A_sm);
-    matrix *C_ours =
-        BTA_spd_csc_alloc((stacked_pd *) B_spd, ((sparse_matrix *) A_sm)->csc_cache);
-    BTDA_spd_csc_fill_values((stacked_pd *) B_spd, d,
-                             ((sparse_matrix *) A_sm)->csc_cache,
+    /* Route 1: our new BTDA_spd_csc_fill_values on A's CSC mirror. */
+    const CSC_matrix *A_sm_csc = sparse_csc_fresh(A_sm);
+    matrix *C_ours = BTA_spd_csc_alloc((stacked_pd *) B_spd, A_sm_csc);
+    BTDA_spd_csc_fill_values((stacked_pd *) B_spd, d, A_sm_csc,
                              (stacked_pd *) C_ours);
 
     /* Route 2: dispatcher with B flattened to sparse_matrix. Note
        BTA_matrices_alloc(A, B) computes B^T @ A, so A goes first. */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A_sm, d, B_sparse, C_ref);
 
     /* C_ours is stacked_pd, C_ref is sparse_matrix — compare via to_csr. */
@@ -1025,20 +999,15 @@ const char *test_BTA_spd_csc_overlapping(void)
     memcpy(A_csr->x, Ax, sizeof(Ax));
     matrix *A_sm = new_sparse_matrix(A_csr);
 
-    /* Route 1: new kernel. Need A's csc_cache. */
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) A_sm);
-    A_sm->refresh_csc_values(A_sm);
-    matrix *C_ours =
-        BTA_spd_csc_alloc((stacked_pd *) B_spd, ((sparse_matrix *) A_sm)->csc_cache);
-    BTA_spd_csc_fill_values((stacked_pd *) B_spd,
-                            ((sparse_matrix *) A_sm)->csc_cache,
-                            (stacked_pd *) C_ours);
+    /* Route 1: new kernel on A's CSC mirror. */
+    const CSC_matrix *A_sm_csc = sparse_csc_fresh(A_sm);
+    matrix *C_ours = BTA_spd_csc_alloc((stacked_pd *) B_spd, A_sm_csc);
+    BTA_spd_csc_fill_values((stacked_pd *) B_spd, A_sm_csc, (stacked_pd *) C_ours);
 
     /* Route 2: dispatcher with B flattened to sparse and d = ones, so BTDA == BTA.
        BTA_matrices_alloc(A, B) computes B^T @ A, so A goes first. */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sm, d_ones, B_sparse, C_ref);
 
@@ -1088,17 +1057,12 @@ const char *test_BTA_spd_csc_block_no_overlap(void)
     memcpy(A_csr->x, Ax, sizeof(Ax));
     matrix *A_sm = new_sparse_matrix(A_csr);
 
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) A_sm);
-    A_sm->refresh_csc_values(A_sm);
-    matrix *C_ours =
-        BTA_spd_csc_alloc((stacked_pd *) B_spd, ((sparse_matrix *) A_sm)->csc_cache);
-    BTA_spd_csc_fill_values((stacked_pd *) B_spd,
-                            ((sparse_matrix *) A_sm)->csc_cache,
-                            (stacked_pd *) C_ours);
+    const CSC_matrix *A_sm_csc = sparse_csc_fresh(A_sm);
+    matrix *C_ours = BTA_spd_csc_alloc((stacked_pd *) B_spd, A_sm_csc);
+    BTA_spd_csc_fill_values((stacked_pd *) B_spd, A_sm_csc, (stacked_pd *) C_ours);
 
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sm, d_ones, B_sparse, C_ref);
 
@@ -1166,8 +1130,6 @@ const char *test_BTDA_spd_spd_overlapping(void)
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B_sparse, C_ref);
 
     /* C_ours is stacked_pd, C_ref is sparse_matrix — compare via to_csr. */
@@ -1231,8 +1193,6 @@ const char *test_BTA_spd_spd_overlapping(void)
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -1291,8 +1251,6 @@ const char *test_BTA_spd_spd_multi_A_per_block(void)
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -1348,8 +1306,6 @@ const char *test_BTA_spd_spd_nonoverlapping_block(void)
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sparse, C_ref);
 
@@ -1404,7 +1360,6 @@ const char *test_BTA_spd_matrices_pd_A(void)
        through a different internal branch (csc-PD path). */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A, B_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A, d, B_sparse, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -1457,15 +1412,12 @@ const char *test_BTA_spd_matrices_csc_A(void)
     /* Route 1: public dispatcher with B native spd — routes through
        the spd-B branch (BTA_spd_csc internally). */
     matrix *C_ours = BTA_matrices_alloc(A_sm, B_spd);
-    A_sm->refresh_csc_values(A_sm);
     BTDA_matrices_fill_values(A_sm, d, B_spd, C_ours);
 
     /* Route 2: same public dispatcher with B flattened to sparse —
        routes through the csc-csc branch. */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_sparse);
-    A_sm->refresh_csc_values(A_sm);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A_sm, d, B_sparse, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -1525,8 +1477,6 @@ const char *test_BTA_spd_matrices_spd_A(void)
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *B_sparse = spd_to_sparse_matrix_copy(B_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sparse);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B_sparse, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -1580,7 +1530,6 @@ const char *test_BTA_pd_matrices_pd_A(void)
        through BTA_pd_matrices -> BTA_pd_csc, a different kernel. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B);
-    A_sparse->refresh_csc_values(A_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B, C_ref);
 
     /* Both routes produce PD (B is PD). Compare X/perms directly. */
@@ -1606,7 +1555,7 @@ const char *test_BTA_pd_matrices_pd_A(void)
 }
 
 /* BTA_pd_matrices dispatcher: A is sparse_matrix. Verifies the sparse-branch
-   ensures csc_cache and routes to BTA_pd_csc / BTDA_pd_csc. */
+   routes to BTA_pd_csc / BTDA_pd_csc and keeps A's CSC mirror fresh itself. */
 const char *test_BTA_pd_matrices_csc_A(void)
 {
     /* B: 4x5 PD. */
@@ -1630,7 +1579,6 @@ const char *test_BTA_pd_matrices_csc_A(void)
     /* Route 1: public dispatcher with B native PD, A native sparse —
        routes through BTA_pd_matrices -> BTA_pd_csc internally. */
     matrix *C_ours = BTA_matrices_alloc(A_sm, B);
-    A_sm->refresh_csc_values(A_sm);
     BTDA_matrices_fill_values(A_sm, d, B, C_ours);
 
     /* Route 2: same dispatcher with B flattened to sparse — routes
@@ -1639,8 +1587,6 @@ const char *test_BTA_pd_matrices_csc_A(void)
        compare via to_csr. */
     matrix *B_sparse = spd_to_sparse_matrix_copy(B);
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_sparse);
-    A_sm->refresh_csc_values(A_sm);
-    B_sparse->refresh_csc_values(B_sparse);
     BTDA_matrices_fill_values(A_sm, d, B_sparse, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -1696,7 +1642,6 @@ const char *test_BTA_pd_matrices_spd_A(void)
        internal kernel. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B);
-    A_sparse->refresh_csc_values(A_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B, C_ref);
 
     /* Both routes produce PD (B is PD). Compare X/perms directly. */
@@ -1753,19 +1698,16 @@ const char *test_BTDA_csc_spd_overlapping(void)
 
     double d[4] = {2.0, -1.5, 0.5, 1.25};
 
-    /* Route 1: new kernel. Ensure B's csc_cache and refresh values. */
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) B_sm);
-    B_sm->refresh_csc_values(B_sm);
-    matrix *C_ours =
-        BTA_csc_spd_alloc(((sparse_matrix *) B_sm)->csc_cache, (stacked_pd *) A_spd);
-    BTDA_csc_spd_fill_values(((sparse_matrix *) B_sm)->csc_cache, d,
-                             (stacked_pd *) A_spd, (stacked_pd *) C_ours);
+    /* Route 1: new kernel on B's CSC mirror. */
+    const CSC_matrix *B_sm_csc = sparse_csc_fresh(B_sm);
+    matrix *C_ours = BTA_csc_spd_alloc(B_sm_csc, (stacked_pd *) A_spd);
+    BTDA_csc_spd_fill_values(B_sm_csc, d, (stacked_pd *) A_spd,
+                             (stacked_pd *) C_ours);
 
     /* Route 2: production dispatcher with A flattened to sparse_matrix.
        BTA_matrices_alloc(A, B) computes B^T @ A, so A goes first. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sm);
-    A_sparse->refresh_csc_values(A_sparse);
     BTDA_matrices_fill_values(A_sparse, d, B_sm, C_ref);
 
     /* C_ours is stacked_pd, C_ref is sparse_matrix — compare via to_csr. */
@@ -1815,19 +1757,15 @@ const char *test_BTA_csc_spd_overlapping(void)
     memcpy(B_csr->x, Bx, sizeof(Bx));
     matrix *B_sm = new_sparse_matrix(B_csr);
 
-    /* Route 1: new kernel. Ensure B's csc_cache and refresh values. */
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) B_sm);
-    B_sm->refresh_csc_values(B_sm);
-    matrix *C_ours =
-        BTA_csc_spd_alloc(((sparse_matrix *) B_sm)->csc_cache, (stacked_pd *) A_spd);
-    BTA_csc_spd_fill_values(((sparse_matrix *) B_sm)->csc_cache,
-                            (stacked_pd *) A_spd, (stacked_pd *) C_ours);
+    /* Route 1: new kernel on B's CSC mirror. */
+    const CSC_matrix *B_sm_csc = sparse_csc_fresh(B_sm);
+    matrix *C_ours = BTA_csc_spd_alloc(B_sm_csc, (stacked_pd *) A_spd);
+    BTA_csc_spd_fill_values(B_sm_csc, (stacked_pd *) A_spd, (stacked_pd *) C_ours);
 
     /* Route 2: dispatcher with A flattened to sparse_matrix and d = ones, so
        BTDA == BTA. BTA_matrices_alloc(A, B) computes B^T @ A, so A goes first. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sm);
-    A_sparse->refresh_csc_values(A_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sm, C_ref);
 
@@ -1878,16 +1816,12 @@ const char *test_BTA_csc_spd_block_no_overlap(void)
     memcpy(B_csr->x, Bx, sizeof(Bx));
     matrix *B_sm = new_sparse_matrix(B_csr);
 
-    sparse_matrix_ensure_csc_cache((sparse_matrix *) B_sm);
-    B_sm->refresh_csc_values(B_sm);
-    matrix *C_ours =
-        BTA_csc_spd_alloc(((sparse_matrix *) B_sm)->csc_cache, (stacked_pd *) A_spd);
-    BTA_csc_spd_fill_values(((sparse_matrix *) B_sm)->csc_cache,
-                            (stacked_pd *) A_spd, (stacked_pd *) C_ours);
+    const CSC_matrix *B_sm_csc = sparse_csc_fresh(B_sm);
+    matrix *C_ours = BTA_csc_spd_alloc(B_sm_csc, (stacked_pd *) A_spd);
+    BTA_csc_spd_fill_values(B_sm_csc, (stacked_pd *) A_spd, (stacked_pd *) C_ours);
 
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sm);
-    A_sparse->refresh_csc_values(A_sparse);
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
     BTDA_matrices_fill_values(A_sparse, d_ones, B_sm, C_ref);
 
@@ -1933,7 +1867,6 @@ const char *test_BTA_sparse_matrices_pd_A(void)
     /* Route 1: public dispatcher with B native sparse, A native PD —
        routes through BTA_sparse_matrices -> BTA_csc_pd internally. */
     matrix *C_ours = BTA_matrices_alloc(A, B_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A, d, B_sm, C_ours);
 
     /* Route 2: same dispatcher with A flattened to sparse — routes
@@ -1942,8 +1875,6 @@ const char *test_BTA_sparse_matrices_pd_A(void)
        via to_csr. */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sm);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A_sparse, d, B_sm, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -1993,8 +1924,6 @@ const char *test_BTA_sparse_matrices_csc_A(void)
     /* Route 1 (only route): public dispatcher with both operands native
        sparse — routes through BTA_sparse_matrices -> BTA_alloc (csc-csc). */
     matrix *C_ours = BTA_matrices_alloc(A_sm, B_sm);
-    A_sm->refresh_csc_values(A_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A_sm, d, B_sm, C_ours);
 
     /* Reference: hand-compute C = B^T @ diag(d) @ A as a dense 3x3 buffer.
@@ -2080,15 +2009,12 @@ const char *test_BTA_sparse_matrices_spd_A(void)
     /* Route 1: public dispatcher with B native sparse, A native spd —
        routes through BTA_sparse_matrices -> BTA_csc_spd internally. */
     matrix *C_ours = BTA_matrices_alloc(A_spd, B_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A_spd, d, B_sm, C_ours);
 
     /* Route 2: same dispatcher with A flattened to sparse — routes
        through BTA_sparse_matrices -> BTA_alloc (csc-csc). */
     matrix *A_sparse = spd_to_sparse_matrix_copy(A_spd);
     matrix *C_ref = BTA_matrices_alloc(A_sparse, B_sm);
-    A_sparse->refresh_csc_values(A_sparse);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A_sparse, d, B_sm, C_ref);
 
     /* Routes produce different output types — compare via to_csr. */
@@ -2189,11 +2115,9 @@ const char *test_BTA_matrices_fill_spd_csc(void)
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
 
     matrix *C_ours = BTA_matrices_alloc(A_sm, B_spd);
-    A_sm->refresh_csc_values(A_sm);
     BTA_matrices_fill_values(A_sm, B_spd, C_ours);
 
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_spd);
-    A_sm->refresh_csc_values(A_sm);
     BTDA_matrices_fill_values(A_sm, d_ones, B_spd, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -2233,11 +2157,9 @@ const char *test_BTA_matrices_fill_csc_pd(void)
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
 
     matrix *C_ours = BTA_matrices_alloc(A, B_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTA_matrices_fill_values(A, B_sm, C_ours);
 
     matrix *C_ref = BTA_matrices_alloc(A, B_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A, d_ones, B_sm, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -2281,13 +2203,9 @@ const char *test_BTA_matrices_fill_csc_csc(void)
     double d_ones[4] = {1.0, 1.0, 1.0, 1.0};
 
     matrix *C_ours = BTA_matrices_alloc(A_sm, B_sm);
-    A_sm->refresh_csc_values(A_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTA_matrices_fill_values(A_sm, B_sm, C_ours);
 
     matrix *C_ref = BTA_matrices_alloc(A_sm, B_sm);
-    A_sm->refresh_csc_values(A_sm);
-    B_sm->refresh_csc_values(B_sm);
     BTDA_matrices_fill_values(A_sm, d_ones, B_sm, C_ref);
 
     CSR_matrix *csr_ours = C_ours->to_csr(C_ours);
@@ -2357,7 +2275,6 @@ const char *test_BA_pd_kron_spd_no_cache_staleness(void)
     /* Route 2: sparse path via spd_to_sparse_matrix_copy + BA_dense_kron_csc. */
     matrix *J_sparse = spd_to_sparse_matrix_copy(J_spd);
     matrix *C_ref = BA_dense_kron_matrices_alloc((permuted_dense *) A, p, J_sparse);
-    J_sparse->refresh_csc_values(J_sparse);
     BA_dense_kron_matrices_fill_values((permuted_dense *) A, p, J_sparse,
                                        (stacked_pd *) C_ref);
 

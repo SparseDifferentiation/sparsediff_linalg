@@ -134,7 +134,6 @@ const char *test_row_gather_pd_vs_sparse_twin(void)
     row_gather_poison(C);
     A->row_gather_fill_values(A, C);
     A_tw->row_gather_fill_values(A_tw, C_tw);
-    matrix_values_changed(C);
     mu_assert("twin match", row_gather_same_csr(C, C_tw));
 
     /* order-independent mutation of both sources, then refill */
@@ -144,7 +143,6 @@ const char *test_row_gather_pd_vs_sparse_twin(void)
     matrix_values_changed(A_tw);
     A->row_gather_fill_values(A, C);
     A_tw->row_gather_fill_values(A_tw, C_tw);
-    matrix_values_changed(C);
     mu_assert("twin match after refill", row_gather_same_csr(C, C_tw));
 
     free_matrix(C_tw);
@@ -186,7 +184,6 @@ const char *test_row_gather_spd_vs_sparse_twin(void)
     row_gather_poison(C);
     A->row_gather_fill_values(A, C);
     A_tw->row_gather_fill_values(A_tw, C_tw);
-    matrix_values_changed(C);
     mu_assert("twin match", row_gather_same_csr(C, C_tw));
 
     for (int k = 0; k < A->nnz; k++) A->x[k] *= 2.0;
@@ -195,7 +192,6 @@ const char *test_row_gather_spd_vs_sparse_twin(void)
     matrix_values_changed(A_tw);
     A->row_gather_fill_values(A, C);
     A_tw->row_gather_fill_values(A_tw, C_tw);
-    matrix_values_changed(C);
     mu_assert("twin match after refill", row_gather_same_csr(C, C_tw));
 
     free_matrix(C_tw);

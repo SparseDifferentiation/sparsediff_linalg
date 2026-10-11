@@ -1304,23 +1304,6 @@ const char *test_spd_vtable_transpose(void)
     return 0;
 }
 
-/* Vtable: refresh_csc_values is a no-op; verify no crash. */
-const char *test_spd_vtable_refresh_csc_values_noop(void)
-{
-    int row_perm[1] = {0};
-    int col_perm[1] = {0};
-    double X[1] = {1.0};
-    matrix *blk = new_permuted_dense(1, 1, 1, 1, row_perm, col_perm, X);
-
-    permuted_dense *blocks[1] = {(permuted_dense *) blk};
-    matrix *M = new_stacked_pd(1, 1, 1, blocks, NULL, NULL);
-
-    M->refresh_csc_values(M);
-
-    free_matrix(M);
-    return 0;
-}
-
 /* row_gather on spd: each output row is routed to the source block (if any)
    that carries its source row; per-block row_gather_pd_* is reused; empty
    result blocks are dropped; repeats are allowed. */

@@ -93,11 +93,6 @@ static void stacked_pd_vtable_transpose_fill_values(const matrix *self, matrix *
     matrix_values_changed(out);
 }
 
-static void stacked_pd_vtable_refresh_csc_values(matrix *self)
-{
-    (void) self; /* spd has no CSC cache to refresh */
-}
-
 static CSR_matrix *stacked_pd_to_csr_alloc(const stacked_pd *spd)
 {
     int m = spd->base.m;
@@ -263,6 +258,7 @@ static void stacked_pd_vtable_row_gather_fill_values(const matrix *self, matrix 
         int sk = out_spd->src_block_idx[k];
         row_gather_pd_fill_values(src->blocks[sk], out_spd->blocks[k]);
     }
+    matrix_values_changed(out);
 }
 
 // -----------------------------------------------------------------------------
@@ -292,6 +288,7 @@ static void stacked_pd_vtable_diag_vec_fill_values(matrix *self, matrix *out)
     {
         diag_vec_pd_fill_values(src->blocks[k], out_spd->blocks[k]);
     }
+    matrix_values_changed(out);
 }
 
 // --------------------------------------------------------------------------------
@@ -338,6 +335,7 @@ static matrix *stacked_pd_vtable_row_reduce_alloc(const matrix *self,
 static void stacked_pd_vtable_row_reduce_fill_values(const matrix *self, matrix *out)
 {
     row_reduce_spd_fill_values((const stacked_pd *) self, (stacked_pd *) out);
+    matrix_values_changed(out);
 }
 
 static void wire_vtable(stacked_pd *spd)
@@ -350,7 +348,6 @@ static void wire_vtable(stacked_pd *spd)
     spd->base.ATDA_fill_values = stacked_pd_vtable_ATDA_fill_values;
     spd->base.transpose_alloc = stacked_pd_vtable_transpose_alloc;
     spd->base.transpose_fill_values = stacked_pd_vtable_transpose_fill_values;
-    spd->base.refresh_csc_values = stacked_pd_vtable_refresh_csc_values;
     spd->base.to_csr = stacked_pd_to_csr;
     spd->base.row_gather_alloc = stacked_pd_vtable_row_gather_alloc;
     spd->base.row_gather_fill_values = stacked_pd_vtable_row_gather_fill_values;

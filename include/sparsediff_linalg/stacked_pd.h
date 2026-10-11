@@ -94,7 +94,8 @@ matrix *coalesce_spd_alloc(const stacked_pd *A);
    overlapping row permutations. */
 matrix *coalesce_spd_alloc_unchecked(const stacked_pd *A);
 
-/* Fill values of C = coalesce(A). */
+/* Fill values of C = coalesce(A). Raw kernel: does not bump C's
+   values_version (the vtable fills that use it do). */
 void coalesce_spd_fill_values(const stacked_pd *A, stacked_pd *C);
 
 /* Same scatter as coalesce_spd_fill_values but with += instead of =. Caller is

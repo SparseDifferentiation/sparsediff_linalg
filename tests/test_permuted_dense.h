@@ -824,7 +824,6 @@ const char *test_BA_pd_matrices_pd_csc(void)
     matrix *A_m = new_sparse_matrix(csr);
 
     matrix *C_m = BA_pd_matrices_alloc((permuted_dense *) B_m, A_m);
-    A_m->refresh_csc_values(A_m); /* values must be fresh before fill */
     BA_pd_matrices_fill_values((permuted_dense *) B_m, A_m, (permuted_dense *) C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;

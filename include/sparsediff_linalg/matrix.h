@@ -78,11 +78,6 @@ typedef void (*matrix_transpose_fill_values_fn)(const matrix *A, matrix *AT);
 /* Returns a CSR_matrix view of A */
 typedef CSR_matrix *(*matrix_to_csr_fn)(matrix *A);
 
-/* Refresh any internal caches (e.g. a CSC_matrix mirror) so subsequent ATA /
-   ATDA calls reflect the current values. Version-guarded: a no-op when the
-   cache already matches values_version, so it is cheap to call when fresh. */
-typedef void (*matrix_refresh_csc_values_fn)(matrix *A);
-
 /* Allocate C = A[map, :]. C stores map internally, so the fill takes none. */
 typedef matrix *(*matrix_row_gather_alloc_fn)(const matrix *A, const int *map,
                                               int m_out);
@@ -115,10 +110,12 @@ struct matrix
 
     /* Monotone counter bumped whenever the matrix's values change. Consumers
        that mirror the values into a cache (CSC mirror, CSR view, ...) record
-       the version they last saw and refresh iff it differs. Code that writes
-       x directly must call matrix_values_changed on the OWNER of the buffer —
-       aliased children (spd blocks, cache views) have no version of their
-       own. */
+       the version they last saw and refresh iff it differs. Every library
+       fill bumps the version of the matrix it writes and refreshes any
+       operand cache it reads, so the only rule left for callers is: code
+       that writes x directly must call matrix_values_changed on the OWNER of
+       the buffer — aliased children (spd blocks, cache views) have no version
+       of their own. */
     uint64_t values_version;
 
     /* Operator ops */
@@ -134,9 +131,8 @@ struct matrix
     matrix_transpose_alloc_fn transpose_alloc;
     matrix_transpose_fill_values_fn transpose_fill_values;
 
-    /* Views and cache */
+    /* Views */
     matrix_to_csr_fn to_csr;
-    matrix_refresh_csc_values_fn refresh_csc_values;
 
     /* Atom-specific ops */
     matrix_row_gather_alloc_fn row_gather_alloc;

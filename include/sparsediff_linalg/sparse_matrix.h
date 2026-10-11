@@ -21,8 +21,10 @@
 #include "sparsediff_linalg/matrix.h"
 
 /* Sparse matrix wrapping CSR_matrix. csc_cache is a lazily-built CSC_matrix mirror
-   used by the chain-rule ATA / ATDA paths; it's allocated on first need and refilled
-   by refresh_csc_values. csc_iwork is the workspace for csr_to_csc. */
+   used by the kernels that consume CSC (ATA / ATDA and the matmul dispatchers);
+   it's allocated on first need and refilled by the fills that read it, guarded by
+   csc_seen against base.values_version. csc_iwork is the workspace for
+   csr_to_csc. */
 typedef struct sparse_matrix
 {
     matrix base;
@@ -54,11 +56,5 @@ void sparse_matrix_trim(matrix *M);
 
 /* Transpose helper */
 matrix *sparse_matrix_trans(const sparse_matrix *self, int *iwork);
-
-/* Build the CSC_matrix cache structure if absent. Idempotent; structure-only,
-   values are NOT filled (use refresh_csc_values for that). Exposed so the
-   bivariate dispatchers in matrix_BTA can prepare sparsity without touching
-   uninitialized values during the init phase. */
-void sparse_matrix_ensure_csc_cache(sparse_matrix *sm);
 
 #endif /* SPARSE_MATRIX_H */

@@ -29,6 +29,7 @@ void sum_matrices_alloc(matrix *A, matrix *B, matrix *C)
 void sum_matrices_fill_values(matrix *A, matrix *B, matrix *C)
 {
     sum_csr_fill_values(A->to_csr(A), B->to_csr(B), C->to_csr(C));
+    matrix_values_changed(C);
 }
 
 void sum_scaled_matrices_fill_values(matrix *A, matrix *B, matrix *C,
@@ -36,4 +37,5 @@ void sum_scaled_matrices_fill_values(matrix *A, matrix *B, matrix *C,
 {
     sum_scaled_csr_matrices_fill_values(A->to_csr(A), B->to_csr(B), C->to_csr(C), d1,
                                         d2);
+    matrix_values_changed(C);
 }
