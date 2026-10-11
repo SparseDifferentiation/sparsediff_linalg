@@ -8,11 +8,22 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-#ifndef MATMUL_DISPATCHERS_H
-#define MATMUL_DISPATCHERS_H
+#ifndef MATMUL_H
+#define MATMUL_H
 
 #include "sparsediff_linalg/matrix.h"
+
+/* Two-operand operations on matrix handles: products through the kind
+   dispatchers and polymorphic sums. All are two-phase: *_alloc builds the
+   output (returned, or filled into a caller-provided handle for the sums),
+   *_fill_values writes its values and bumps its values_version. */
 
 /* Polymorphic dispatchers for C = BT @ A and C = BT @ diag(d) @ A, where A
    and B are any matrix type (permuted_dense, stacked_pd, or sparse_matrix).
@@ -49,4 +60,15 @@ matrix *BA_dense_kron_matrices_alloc(const matrix *A, int p, matrix *J);
 void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
                                         matrix *C);
 
-#endif /* MATMUL_DISPATCHERS_H */
+/* Polymorphic wrappers for allocating C = A + B. Right now we always
+   convert to CSR matrices internally for the sum. */
+void sum_matrices_alloc(matrix *A, matrix *B, matrix *C);
+
+/* Fill values of C = A + B. Uses CSR matrices internally. */
+void sum_matrices_fill_values(matrix *A, matrix *B, matrix *C);
+
+/* Fill values of C = diag(d1) * A + diag(d2) * B. Uses CSR matrices internally. */
+void sum_scaled_matrices_fill_values(matrix *A, matrix *B, matrix *C,
+                                     const double *d1, const double *d2);
+
+#endif /* MATMUL_H */

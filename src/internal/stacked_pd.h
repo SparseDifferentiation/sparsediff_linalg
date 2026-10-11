@@ -19,12 +19,11 @@
 #define INTERNAL_STACKED_PD_H
 
 /* Private: the stacked_pd kind's layout and its blockwise helpers. Consumers
-   see only matrix.h and the constructor in sparsediff_linalg/stacked_pd.h. */
+   see only matrix.h, which also declares the constructor. */
 
 #include "internal/permuted_dense.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matrix.h"
-#include "sparsediff_linalg/stacked_pd.h"
 
 typedef struct stacked_pd
 {

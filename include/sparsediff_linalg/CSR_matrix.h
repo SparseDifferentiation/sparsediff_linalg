@@ -42,7 +42,6 @@ typedef struct CSR_matrix
 /* constructors and destructors */
 CSR_matrix *new_CSR_matrix(int m, int n, int nnz);
 CSR_matrix *new_csr(const CSR_matrix *A);
-CSR_matrix *new_csr_copy_sparsity(const CSR_matrix *A);
 void free_CSR_matrix(CSR_matrix *matrix);
 void copy_CSR_matrix(const CSR_matrix *A, CSR_matrix *C);
 
@@ -59,20 +58,10 @@ void AT_fill_values(const CSR_matrix *A, CSR_matrix *AT, int *iwork);
 /* computes dense y = Ax */
 void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset);
 
-/* fills values of C = diag(d) @ A */
-void DA_fill_values(const double *d, const CSR_matrix *A, CSR_matrix *C);
-
 /* Count number of columns with nonzero entries in A and marks them in col_nz */
 int count_nonzero_cols(const CSR_matrix *A, bool *col_nz);
 
 /* inserts 'idx' into array 'arr' in sorted order, and moves the other elements */
 void insert_idx(int idx, int *arr, int len);
-
-/* get value at position (row, col) in A */
-double csr_get_value(const CSR_matrix *A, int row, int col);
-
-/* Expand symmetric CSR_matrix matrix A to full matrix C. A is assumed to store
-   only upper triangle. C must be pre-allocated with sufficient nnz */
-void symmetrize_csr(const int *Ap, const int *Ai, int m, CSR_matrix *C);
 
 #endif /* CSR_matrix_H */

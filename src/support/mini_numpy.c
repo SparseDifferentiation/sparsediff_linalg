@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/mini_numpy.h"
+#include "sparsediff_linalg/csr_kernels.h"
+#include "sparsediff_linalg/dense.h"
 #include <string.h>
 
 void repeat(double *result, const double *a, int len, int repeats)

@@ -20,10 +20,9 @@
 
 /* Private: the permuted_dense kind's layout and its raw per-kind kernels.
    Consumers see only matrix.h and the constructors in
-   sparsediff_linalg/permuted_dense.h. */
+   matrix.h. */
 
 #include "sparsediff_linalg/matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
 #include <stdbool.h>
 #include <stddef.h>
 

@@ -9,7 +9,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
-#include "sparsediff_linalg/matmul_dispatchers.h"
+#include "sparsediff_linalg/matmul.h"
 
 #include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"

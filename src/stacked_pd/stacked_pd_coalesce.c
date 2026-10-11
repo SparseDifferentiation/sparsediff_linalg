@@ -17,9 +17,9 @@
  */
 #include "internal/stacked_pd.h"
 
-#include "sparsediff_linalg/iVec.h"
+#include "internal/iVec.h"
+#include "internal/utils.h"
 #include "sparsediff_linalg/tracked_alloc.h"
-#include "sparsediff_linalg/utils.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>

@@ -17,11 +17,11 @@
  */
 #include "internal/permuted_dense.h"
 
+#include "internal/csr_kernels.h"
 #include "internal/permuted_dense_linalg.h"
+#include "internal/utils.h"
 #include "sparsediff_linalg/cblas_wrapper.h"
-#include "sparsediff_linalg/linalg_dense_sparse_matmuls.h"
 #include "sparsediff_linalg/tracked_alloc.h"
-#include "sparsediff_linalg/utils.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>

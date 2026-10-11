@@ -1,17 +1,14 @@
 #ifndef TEST_PERMUTED_DENSE_H
 #define TEST_PERMUTED_DENSE_H
 
+#include "internal/CSR_matrix.h"
 #include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
 #include "internal/sparse_matrix.h"
 #include "internal/stacked_pd.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
-#include "sparsediff_linalg/matmul_dispatchers.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/sparse_matrix.h"
-#include "sparsediff_linalg/stacked_pd.h"
-#include "sparsediff_linalg/utils.h"
+#include "sparsediff_linalg/matmul.h"
 #include "test_helpers.h"
 #include <stdlib.h>
 #include <string.h>

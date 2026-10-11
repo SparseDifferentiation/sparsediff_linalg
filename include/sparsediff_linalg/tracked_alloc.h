@@ -38,8 +38,18 @@
 #define TRACKED_BLOCK_SIZE(p) malloc_usable_size(p)
 #endif
 
+/* Counters behind the inline wrappers below: an implementation detail that
+   must be visible here for inlining. Consumers read them through
+   sp_memory_stats / sp_memory_reset_peak. */
 extern size_t g_allocated_bytes; /* current live bytes */
 extern size_t g_peak_bytes;      /* high-water mark since last reset */
+
+/* Report the live byte count and the high-water mark since the last reset.
+   Either pointer may be NULL. */
+void sp_memory_stats(size_t *live_bytes, size_t *peak_bytes);
+
+/* Reset the high-water mark to the current live byte count. */
+void sp_memory_reset_peak(void);
 
 /* All allocations in src/ must go through these wrappers (and pair sp_free
    with sp_malloc / sp_calloc). Tests may use plain malloc/free — those
