@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(sparsediff_linalg VERSION 0.2.0 LANGUAGES C)
+project(sparsediff_linalg VERSION 0.3.0 LANGUAGES C)
 set(CMAKE_C_STANDARD 99)
 
 # Standalone (top-level) build vs. embedded via add_subdirectory(): a parent
@@ -160,27 +160,31 @@ if(SPARSEDIFF_LINALG_BUILD_TESTS)
     # The suite links sparsediff_linalg alone, so a test that reaches outside the
     # library fails to link. include/ is public on the target, so the linker
     # would not catch a header-only reach; this check does. Quoted includes may
-    # name a library header (public or private: the suite is white-box),
-    # minunit/test_helpers, or a sibling test_<name>.h.
+    # name a library header (public or private: the suite is white-box), a
+    # legacy oracle header, minunit/test_helpers, or a sibling test_<name>.h.
     file(GLOB_RECURSE _sdl_test_files "tests/*.c" "tests/*.h")
     foreach(_sdl_file IN LISTS _sdl_test_files)
         file(STRINGS "${_sdl_file}" _sdl_includes REGEX "^[ \t]*#[ \t]*include[ \t]*\"")
         foreach(_sdl_line IN LISTS _sdl_includes)
             if(NOT _sdl_line MATCHES
-               "\"((sparsediff_linalg|internal)/[A-Za-z0-9_]+|minunit|test_[A-Za-z0-9_]+)\\.h\"")
+               "\"((sparsediff_linalg|internal|legacy)/[A-Za-z0-9_]+|minunit|test_[A-Za-z0-9_]+)\\.h\"")
                 message(FATAL_ERROR
                     "Layering violation in ${_sdl_file}:\n"
                     "    ${_sdl_line}\n"
                     "sparsediff_linalg tests may include only sparsediff_linalg/<name>.h, "
-                    "internal/<name>.h, minunit.h, test_helpers.h and sibling "
-                    "test_<name>.h files.")
+                    "internal/<name>.h, legacy/<name>.h, minunit.h, test_helpers.h and "
+                    "sibling test_<name>.h files.")
             endif()
         endforeach()
     endforeach()
 
+    # tests/legacy holds the retired CSR-era kernels, compiled into the test
+    # executable only, as oracles for the current kernels.
+    file(GLOB _sdl_legacy_sources "tests/legacy/*.c")
     add_executable(sparsediff_linalg_tests
         tests/sparsediff_linalg_tests.c
         tests/test_helpers.c
+        ${_sdl_legacy_sources}
     )
     target_include_directories(sparsediff_linalg_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/tests

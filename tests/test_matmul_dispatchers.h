@@ -1,8 +1,11 @@
 #ifndef TEST_MATMUL_DISPATCHERS_H
 #define TEST_MATMUL_DISPATCHERS_H
 
+#include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
+#include "internal/sparse_matrix.h"
 #include "internal/sparse_matrix_cache.h"
+#include "internal/stacked_pd.h"
 #include "internal/stacked_pd_linalg.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
@@ -2268,15 +2271,13 @@ const char *test_BA_pd_kron_spd_no_cache_staleness(void)
     int p = 3;
 
     /* Route 1: spd path through BA_pd_kron_spd. */
-    matrix *C_spd = BA_dense_kron_matrices_alloc((permuted_dense *) A, p, J_spd);
-    BA_dense_kron_matrices_fill_values((permuted_dense *) A, p, J_spd,
-                                       (stacked_pd *) C_spd);
+    matrix *C_spd = BA_dense_kron_matrices_alloc(A, p, J_spd);
+    BA_dense_kron_matrices_fill_values(A, p, J_spd, C_spd);
 
     /* Route 2: sparse path via spd_to_sparse_matrix_copy + BA_dense_kron_csc. */
     matrix *J_sparse = spd_to_sparse_matrix_copy(J_spd);
-    matrix *C_ref = BA_dense_kron_matrices_alloc((permuted_dense *) A, p, J_sparse);
-    BA_dense_kron_matrices_fill_values((permuted_dense *) A, p, J_sparse,
-                                       (stacked_pd *) C_ref);
+    matrix *C_ref = BA_dense_kron_matrices_alloc(A, p, J_sparse);
+    BA_dense_kron_matrices_fill_values(A, p, J_sparse, C_ref);
 
     /* Compare via to_csr — output structures may differ. */
     CSR_matrix *csr_spd = C_spd->to_csr(C_spd);

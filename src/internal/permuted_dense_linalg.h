@@ -18,8 +18,8 @@
 #ifndef PERMUTED_DENSE_LINALG_H
 #define PERMUTED_DENSE_LINALG_H
 
+#include "internal/permuted_dense.h"
 #include "sparsediff_linalg/CSC_matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
 
 /* Fill values of C = diag(d) @ A where len(d) = number of (global) rows of A */
 void DA_pd_fill_values(const double *d, const permuted_dense *A, permuted_dense *C);

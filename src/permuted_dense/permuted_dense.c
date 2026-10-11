@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/permuted_dense.h"
+#include "internal/permuted_dense.h"
 
 #include "internal/permuted_dense_linalg.h"
 #include "sparsediff_linalg/cblas_wrapper.h"

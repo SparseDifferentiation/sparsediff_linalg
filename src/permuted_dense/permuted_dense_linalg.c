@@ -17,10 +17,10 @@
  */
 #include "internal/permuted_dense_linalg.h"
 
+#include "internal/permuted_dense.h"
 #include "sparsediff_linalg/cblas_wrapper.h"
 #include "sparsediff_linalg/iVec.h"
 #include "sparsediff_linalg/mini_numpy.h"
-#include "sparsediff_linalg/permuted_dense.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include "sparsediff_linalg/utils.h"
 #include <assert.h>
@@ -231,9 +231,9 @@ void BTDA_pd_pd_fill_values(const permuted_dense *B, const double *d,
     BTA_pd_pd_core(B, d, A, C);
 }
 
-/* The CSR-flavored kernels for (B=Sparse, A=PD) live in src/old-code; the
-   production path uses BTA_csc_pd_alloc / BTDA_csc_pd_fill_values defined
-   further below, which delegate to BTA_pd_csc via the (A^T B)^T identity. */
+/* The CSR-flavored kernels for (B=Sparse, A=PD) live in the library tests under
+   tests/legacy; the production path uses BTA_csc_pd_alloc / BTDA_csc_pd_fill_values
+   defined further below, which delegate to BTA_pd_csc via the (A^T B)^T identity. */
 
 /* Return true if any of the 'len' integers in 'indices' exist in the set
    marked by 'inv' (inv[k] != -1 iff k is in the set). */

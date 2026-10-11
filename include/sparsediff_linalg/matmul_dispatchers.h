@@ -13,9 +13,6 @@
 #define MATMUL_DISPATCHERS_H
 
 #include "sparsediff_linalg/matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/sparse_matrix.h"
-#include "sparsediff_linalg/stacked_pd.h"
 
 /* Polymorphic dispatchers for C = BT @ A and C = BT @ diag(d) @ A, where A
    and B are any matrix type (permuted_dense, stacked_pd, or sparse_matrix).
@@ -28,29 +25,28 @@
      - B is sparse_matrix, A is sparse  -> output is sparse_matrix.
 
    Sparse operands are read through their CSC mirror, which the fill refreshes
-   itself (version-guarded). Every fill bumps C's values_version. */
+   itself (version-guarded). Every fill bumps C's values_version. The fills
+   assert that C has the kind the matching alloc produced. */
 matrix *BTA_matrices_alloc(matrix *A, matrix *B);
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C);
 
-/* Polymorphic dispatchers for C = B @ A, where B is permuted_dense and A is any
-   matrix type (permuted_dense, stacked_pd, or sparse_matrix). The output C is
-   always permuted_dense. A sparse A is read through its CSC mirror, which the
-   fill refreshes itself. The fill bumps C's values_version. */
-matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A);
-void BA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
-                                permuted_dense *C);
+/* Polymorphic dispatchers for C = B @ A, where B must be of kind
+   MATRIX_PERMUTED_DENSE (asserted) and A is any kind. The output C is always
+   permuted_dense. A sparse A is read through its CSC mirror, which the fill
+   refreshes itself. The fill bumps C's values_version. */
+matrix *BA_pd_matrices_alloc(const matrix *B, matrix *A);
+void BA_pd_matrices_fill_values(const matrix *B, const matrix *A, matrix *C);
 
 /* Polymorphic dispatchers for C = kron(I_p, A) @ J, where A is a local dense
-   matrix and J is any matrix type (permuted_dense, stacked_pd, or
-   sparse_matrix). The output C is always stacked_pd.
+   matrix and J is any kind. The output C is always stacked_pd.
 
-   Contract: A must be a "full" permuted_dense (m0 == base.m, n0 == base.n,
-   and row_perm / col_perm are the identity). A sparse J is read through its
-   CSC mirror, which the fill refreshes itself. The fill bumps C's
-   values_version. */
-matrix *BA_dense_kron_matrices_alloc(const permuted_dense *A, int p, matrix *J);
-void BA_dense_kron_matrices_fill_values(const permuted_dense *A, int p,
-                                        const matrix *J, stacked_pd *C);
+   Contract (asserted): A must be a "full" permuted_dense, i.e. of kind
+   MATRIX_PERMUTED_DENSE with its dense block covering the whole (m, n) shape
+   (as built by new_permuted_dense_full). A sparse J is read through its CSC
+   mirror, which the fill refreshes itself. The fill bumps C's values_version. */
+matrix *BA_dense_kron_matrices_alloc(const matrix *A, int p, matrix *J);
+void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
+                                        matrix *C);
 
 #endif /* MATMUL_DISPATCHERS_H */

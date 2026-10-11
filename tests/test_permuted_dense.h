@@ -1,7 +1,10 @@
 #ifndef TEST_PERMUTED_DENSE_H
 #define TEST_PERMUTED_DENSE_H
 
+#include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
+#include "internal/sparse_matrix.h"
+#include "internal/stacked_pd.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/matmul_dispatchers.h"
@@ -741,8 +744,8 @@ const char *test_BA_pd_matrices_pd_pd_full_block_B(void)
     double XA[4] = {7.0, 8.0, 9.0, 10.0};
     matrix *A_m = new_permuted_dense(3, 5, 2, 2, row_perm_A, col_perm_A, XA);
 
-    matrix *C_m = BA_pd_matrices_alloc((permuted_dense *) B_m, A_m);
-    BA_pd_matrices_fill_values((permuted_dense *) B_m, A_m, (permuted_dense *) C_m);
+    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
+    BA_pd_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
@@ -781,8 +784,8 @@ const char *test_BA_pd_matrices_pd_pd_general_B(void)
     double XA[4] = {5.0, 6.0, 7.0, 8.0};
     matrix *A_m = new_permuted_dense(5, 4, 2, 2, row_perm_A, col_perm_A, XA);
 
-    matrix *C_m = BA_pd_matrices_alloc((permuted_dense *) B_m, A_m);
-    BA_pd_matrices_fill_values((permuted_dense *) B_m, A_m, (permuted_dense *) C_m);
+    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
+    BA_pd_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
@@ -823,8 +826,8 @@ const char *test_BA_pd_matrices_pd_csc(void)
     memcpy(csr->x, Ax, 4 * sizeof(double));
     matrix *A_m = new_sparse_matrix(csr);
 
-    matrix *C_m = BA_pd_matrices_alloc((permuted_dense *) B_m, A_m);
-    BA_pd_matrices_fill_values((permuted_dense *) B_m, A_m, (permuted_dense *) C_m);
+    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
+    BA_pd_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
@@ -867,8 +870,8 @@ const char *test_BA_pd_matrices_spd_A(void)
     permuted_dense *blocks[2] = {(permuted_dense *) A0, (permuted_dense *) A1};
     matrix *A = new_stacked_pd(4, 6, 2, blocks, NULL, NULL);
 
-    matrix *C_m = BA_pd_matrices_alloc((permuted_dense *) B, A);
-    BA_pd_matrices_fill_values((permuted_dense *) B, A, (permuted_dense *) C_m);
+    matrix *C_m = BA_pd_matrices_alloc(B, A);
+    BA_pd_matrices_fill_values(B, A, C_m);
     permuted_dense *C = (permuted_dense *) C_m;
 
     mu_assert("C m", C_m->m == 3);
@@ -907,8 +910,8 @@ const char *test_BA_pd_matrices_fast_path(void)
     double XA[4] = {5.0, 6.0, 7.0, 8.0};
     matrix *A_m = new_permuted_dense(4, 3, 2, 2, row_perm_A, col_perm_A, XA);
 
-    matrix *C_m = BA_pd_matrices_alloc((permuted_dense *) B_m, A_m);
-    BA_pd_matrices_fill_values((permuted_dense *) B_m, A_m, (permuted_dense *) C_m);
+    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
+    BA_pd_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
