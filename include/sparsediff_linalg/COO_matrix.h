@@ -18,7 +18,7 @@
 #ifndef COO_matrix_H
 #define COO_matrix_H
 
-#include "sparse_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 
 /* COO (Coordinate) Sparse matrix Format
  *

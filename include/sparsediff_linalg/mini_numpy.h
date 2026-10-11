@@ -18,7 +18,7 @@
 #ifndef MINI_NUMPY_H
 #define MINI_NUMPY_H
 
-#include "sparse_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 
 /* Example: a = [1, 2], len = 2, repeats = 3, result = [1, 1, 1, 2, 2, 2] */
 void repeat(double *result, const double *a, int len, int repeats);

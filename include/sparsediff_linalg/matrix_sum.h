@@ -18,7 +18,7 @@
 #ifndef MATRIX_SUM_H
 #define MATRIX_SUM_H
 
-#include "sparse_linalg/matrix.h"
+#include "sparsediff_linalg/matrix.h"
 
 /* Polymorphic wrappers for allocating C = A + B. Right now we always
    convert to CSR matrices internally for the sum. */

@@ -36,7 +36,7 @@
 #ifndef VEC_MACROS_H
 #define VEC_MACROS_H
 
-#include "sparse_linalg/tracked_alloc.h"
+#include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -18,7 +18,7 @@
 #ifndef CSR_SUM_H
 #define CSR_SUM_H
 
-#include "sparse_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 
 /* forward declaration */
 struct int_double_pair;

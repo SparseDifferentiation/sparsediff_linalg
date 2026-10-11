@@ -2,8 +2,8 @@
 
 #include "minunit.h"
 
-/* Library-only suite: this executable links sparse_linalg alone, so every
-   header below may include only sparse_linalg/<name>.h, internal/<name>.h,
+/* Library-only suite: this executable links sparsediff_linalg alone, so every
+   header below may include only sparsediff_linalg/<name>.h, internal/<name>.h,
    minunit.h, test_helpers.h and sibling test_<name>.h files (checked at
    configure time in ../CMakeLists.txt). Tests that need old-code or engine
    kernels live in the engine's tests/old-code and run from all_tests. */
@@ -24,11 +24,11 @@
 
 int main(void)
 {
-    printf("=== Running sparse_linalg Tests ===\n\n");
+    printf("=== Running sparsediff_linalg Tests ===\n\n");
 
     int tests_run = 0;
 
-    printf("--- sparse_linalg Tests ---\n");
+    printf("--- sparsediff_linalg Tests ---\n");
     mu_run_test(test_sat_mul_int_clamps_on_overflow, tests_run);
     mu_run_test(test_row_gather_alloc_no_int_overflow, tests_run);
     mu_run_test(test_cblas_ddot, tests_run);
@@ -198,6 +198,6 @@ int main(void)
     mu_run_test(test_I_kron_X, tests_run);
     mu_run_test(test_I_kron_X_larger, tests_run);
 
-    printf("\n=== All %d sparse_linalg tests passed ===\n", tests_run);
+    printf("\n=== All %d sparsediff_linalg tests passed ===\n", tests_run);
     return 0;
 }

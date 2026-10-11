@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparse_linalg/matrix_sum.h"
-#include "sparse_linalg/CSR_sum.h"
-#include "sparse_linalg/sparse_matrix.h"
+#include "sparsediff_linalg/matrix_sum.h"
+#include "sparsediff_linalg/CSR_sum.h"
+#include "sparsediff_linalg/sparse_matrix.h"
 
 void sum_matrices_alloc(matrix *A, matrix *B, matrix *C)
 {

@@ -12,10 +12,10 @@
 #ifndef MATMUL_DISPATCHERS_H
 #define MATMUL_DISPATCHERS_H
 
-#include "sparse_linalg/matrix.h"
-#include "sparse_linalg/permuted_dense.h"
-#include "sparse_linalg/sparse_matrix.h"
-#include "sparse_linalg/stacked_pd.h"
+#include "sparsediff_linalg/matrix.h"
+#include "sparsediff_linalg/permuted_dense.h"
+#include "sparsediff_linalg/sparse_matrix.h"
+#include "sparsediff_linalg/stacked_pd.h"
 
 /* Polymorphic dispatchers for C = BT @ A and C = BT @ diag(d) @ A, where A
    and B are any matrix type (permuted_dense, stacked_pd, or sparse_matrix).

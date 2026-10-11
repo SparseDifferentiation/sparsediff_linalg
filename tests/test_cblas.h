@@ -2,7 +2,7 @@
 #define TEST_CBLAS_H
 
 #include "minunit.h"
-#include "sparse_linalg/cblas_wrapper.h"
+#include "sparsediff_linalg/cblas_wrapper.h"
 #include <math.h>
 
 static char *test_cblas_ddot(void)

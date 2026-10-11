@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "minunit.h"
-#include "sparse_linalg/CSC_matrix.h"
-#include "sparse_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 #include "test_helpers.h"
 
 /* Test CSR_matrix to CSC_matrix conversion with fill_sparsity and fill_values */

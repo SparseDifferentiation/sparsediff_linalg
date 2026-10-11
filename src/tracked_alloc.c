@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparse_linalg/tracked_alloc.h"
+#include "sparsediff_linalg/tracked_alloc.h"
 
 #ifdef SP_TRACK_MEMORY
 size_t g_allocated_bytes = 0;

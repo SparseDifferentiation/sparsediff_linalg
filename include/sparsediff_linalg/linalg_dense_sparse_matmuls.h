@@ -18,9 +18,9 @@
 #ifndef LINALG_DENSE_SPARSE_H
 #define LINALG_DENSE_SPARSE_H
 
-#include "sparse_linalg/CSC_matrix.h"
-#include "sparse_linalg/CSR_matrix.h"
-#include "sparse_linalg/matrix.h"
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/matrix.h"
 
 /* C = (I_p kron A) @ J via the polymorphic matrix interface.
  * A is dense m x n, J is (n*p) x k in CSC_matrix, C is (m*p) x k in CSC_matrix.

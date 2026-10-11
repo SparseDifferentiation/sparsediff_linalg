@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparse_linalg/CSC_matrix.h"
-#include "sparse_linalg/CSR_matrix.h"
-#include "sparse_linalg/iVec.h"
-#include "sparse_linalg/tracked_alloc.h"
-#include "sparse_linalg/utils.h"
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/iVec.h"
+#include "sparsediff_linalg/tracked_alloc.h"
+#include "sparsediff_linalg/utils.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>

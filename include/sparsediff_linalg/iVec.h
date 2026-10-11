@@ -38,7 +38,7 @@
 
 #include <stdio.h>
 
-#include "sparse_linalg/Vec_macros.h"
+#include "sparsediff_linalg/Vec_macros.h"
 
 // This macro defines a vector of integers.
 DEFINE_VECTOR(int, i)

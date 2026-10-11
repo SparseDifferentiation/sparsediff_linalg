@@ -18,8 +18,8 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#include "sparse_linalg/CSC_matrix.h"
-#include "sparse_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 #include <stdint.h>
 
 /* Polymorphic matrix base. Concrete types embed `matrix` as their first

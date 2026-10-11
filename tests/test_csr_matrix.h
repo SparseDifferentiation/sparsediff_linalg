@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "minunit.h"
-#include "sparse_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 #include "test_helpers.h"
 
 const char *test_transpose(void)

@@ -4,12 +4,12 @@
 #include <string.h>
 
 #include "minunit.h"
-#include "sparse_linalg/CSC_matrix.h"
-#include "sparse_linalg/CSR_matrix.h"
-#include "sparse_linalg/iVec.h"
-#include "sparse_linalg/linalg_sparse_matmuls.h"
-#include "sparse_linalg/tracked_alloc.h"
-#include "sparse_linalg/utils.h"
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/iVec.h"
+#include "sparsediff_linalg/linalg_sparse_matmuls.h"
+#include "sparsediff_linalg/tracked_alloc.h"
+#include "sparsediff_linalg/utils.h"
 #include "test_helpers.h"
 
 /* Test block_left_multiply_fill_sparsity with simple case: single block */

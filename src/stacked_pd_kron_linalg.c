@@ -19,9 +19,9 @@
 
 #include "internal/permuted_dense_linalg.h"
 #include "internal/stacked_pd_linalg.h"
-#include "sparse_linalg/permuted_dense.h"
-#include "sparse_linalg/stacked_pd.h"
-#include "sparse_linalg/tracked_alloc.h"
+#include "sparsediff_linalg/permuted_dense.h"
+#include "sparsediff_linalg/stacked_pd.h"
+#include "sparsediff_linalg/tracked_alloc.h"
 #include <stdlib.h>
 
 // ====================================================================================
