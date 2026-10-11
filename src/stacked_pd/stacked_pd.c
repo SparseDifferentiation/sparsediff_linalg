@@ -18,9 +18,9 @@
 #include "internal/stacked_pd.h"
 
 #include "internal/stacked_pd_linalg.h"
+#include "internal/utils.h"
 #include "sparsediff_linalg/matrix.h"
 #include "sparsediff_linalg/tracked_alloc.h"
-#include "sparsediff_linalg/utils.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

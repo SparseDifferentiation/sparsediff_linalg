@@ -20,4 +20,15 @@
 #ifdef SP_TRACK_MEMORY
 size_t g_allocated_bytes = 0;
 size_t g_peak_bytes = 0;
+
+void sp_memory_stats(size_t *live_bytes, size_t *peak_bytes)
+{
+    if (live_bytes) *live_bytes = g_allocated_bytes;
+    if (peak_bytes) *peak_bytes = g_peak_bytes;
+}
+
+void sp_memory_reset_peak(void)
+{
+    g_peak_bytes = g_allocated_bytes;
+}
 #endif

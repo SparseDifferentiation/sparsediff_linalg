@@ -3,13 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "internal/csr_kernels.h"
+#include "internal/iVec.h"
+#include "internal/utils.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/iVec.h"
-#include "sparsediff_linalg/linalg_sparse_matmuls.h"
+#include "sparsediff_linalg/csr_kernels.h"
 #include "sparsediff_linalg/tracked_alloc.h"
-#include "sparsediff_linalg/utils.h"
 #include "test_helpers.h"
 
 /* Test block_left_multiply_fill_sparsity with simple case: single block */

@@ -5,8 +5,8 @@
 #include "legacy/old_permuted_dense.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/matmul_dispatchers.h"
-#include "sparsediff_linalg/sparse_matrix.h"
+#include "sparsediff_linalg/matmul.h"
+#include "sparsediff_linalg/matrix.h"
 #include "test_helpers.h"
 #include <stdlib.h>
 #include <string.h>

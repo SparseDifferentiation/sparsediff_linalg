@@ -161,4 +161,78 @@ static inline void free_matrix(matrix *m)
     }
 }
 
+/* ---- Constructors of the three kinds. Each returns a matrix handle; the kinds'
+   layouts are private. ---- */
+
+/* The sparse kind: a matrix backed by a CSR_matrix. Its layout is private; use
+   the matrix handle (m, n, nnz, x, kind, values_version, to_csr and the other
+   vtable slots). */
+
+/* Constructor. Takes ownership of A; the caller must not free A separately
+   (free_matrix on the returned matrix frees A). */
+matrix *new_sparse_matrix(CSR_matrix *A);
+
+/* Convenience: allocate a sparse matrix of shape (m, n) with capacity for
+   nnz entries. Equivalent to new_sparse_matrix(new_CSR_matrix(m, n, nnz)).
+   Sparsity pattern and values are uninitialized. */
+matrix *new_sparse_matrix_alloc(int m, int n, int nnz);
+
+/* permuted_dense represents a matrix whose only nonzeros lie in a dense block
+   of size m0 x n0, after rows and columns are restricted to chosen subsets of
+   the global index space. For local indices (ii, jj) with 0 <= ii < m0 and 0 <=
+   jj < n0,
+
+       M[row_perm[ii], col_perm[jj]] = X[ii, jj].
+
+   All other entries of M are zero. row_perm and col_perm are stored in strictly
+   increasing order; the constructor asserts this. */
+/* The kind's layout is private; consumers hold it through the matrix handle.
+   The typedef exists so block arrays can be passed to new_stacked_pd. */
+typedef struct permuted_dense permuted_dense;
+
+/* Constructor. row_perm and col_perm must be strictly increasing in their
+   respective ranges. If X_data is NULL the value buffer is allocated but left
+   uninitialized. Otherwise m0 * n0 entries are copied. */
+matrix *new_permuted_dense(int m, int n, int m0, int n0, const int *row_perm,
+                           const int *col_perm, const double *X_data);
+
+/* Convenience constructor for the trivial-perm case: row_perm = [0..m-1],
+   col_perm = [0..n-1], dense block fills the full (m, n) shape. */
+matrix *new_permuted_dense_full(int m, int n, const double *data);
+
+/* stacked_pd represents a matrix that is the (vertical) union of 'n_blocks'
+   permuted_dense blocks. Two different blocks have disjoint row permutations,
+   but the column permutations may overlap across blocks.
+
+   `src_block_idx_p` and `src_block_idx` form a CSR-style map (offsets + flat
+   data) from each output block to the source block indices that contribute to
+   it in the spd-producing operations that built this spd. For operations with
+   one source per output every entry of `src_block_idx_p` increments by one. For
+   coalesce a single output block can be fed by multiple source blocks. */
+/* The kind's layout is private; consumers hold it through the matrix handle. */
+
+/* Constructor for stacked_pd. Takes ownership of every block in 'blocks'. The
+   arrays 'src_block_idx_p' and 'src_block_idx' map each block in the new
+   stacked_pd (ie. the block in 'blocks') to the source block(s) that
+   contributed to it in the spd-producing operations that built this spd. If
+   src_block_idx_p and src_block_idx are NULL, then src_block_idx is ignored and
+   the constructor produces the identity mapping (each output block has itself
+   as its one source). */
+matrix *new_stacked_pd(int m, int n, int n_blocks, permuted_dense **blocks,
+                       const int *src_block_idx_p, const int *src_block_idx);
+
+/* Re-index `idx_map` in place from CSR ordering to spd-native ordering
+   (block-major). Useful for atoms that build idx_maps from a `to_csr`
+   view at init time and want to read spd values directly at eval time,
+   avoiding the per-call csr_cache->x refresh.
+
+   - `spd` must be of kind MATRIX_STACKED_PD (asserted) and `csr` must
+     correspond to it (csr is the result of spd->to_csr).
+   - `idx_map` has length `csr->nnz` (= `spd->base.nnz`); on entry each
+     entry is indexed by CSR position, on exit each entry is indexed by
+     `spd->base.x` position. The buffer is reused; the caller's pointer
+     stays valid. */
+void compose_csr_idx_map_for_spd(const matrix *spd, const CSR_matrix *csr,
+                                 int *idx_map);
+
 #endif /* MATRIX_H */

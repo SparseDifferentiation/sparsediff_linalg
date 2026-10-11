@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "internal/int_double_pair.h"
 #include "legacy/old_CSR.h"
 #include "legacy/old_CSR_sum.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/int_double_pair.h"
 #include "test_helpers.h"
 
 /* Direct unit tests for the legacy CSR kernels in old-code (diag_csr_mult,

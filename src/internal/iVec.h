@@ -33,12 +33,12 @@
  * limitations under the License.
  */
 
-#ifndef IVEC_H
-#define IVEC_H
+#ifndef INTERNAL_IVEC_H
+#define INTERNAL_IVEC_H
 
 #include <stdio.h>
 
-#include "sparsediff_linalg/Vec_macros.h"
+#include "internal/Vec_macros.h"
 
 // This macro defines a vector of integers.
 DEFINE_VECTOR(int, i)
@@ -53,4 +53,4 @@ __attribute__((unused)) static void print_ivec(iVec *vec)
     printf("\n");
 }
 */
-#endif // IVEC_H
+#endif /* INTERNAL_IVEC_H */

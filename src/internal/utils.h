@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef INTERNAL_UTILS_H
+#define INTERNAL_UTILS_H
 
-#include "sparsediff_linalg/iVec.h"
+#include "internal/iVec.h"
 #include <limits.h>
 #include <stdbool.h>
 
@@ -63,4 +63,4 @@ void sorted_union_int_arrays(const int *const *arrs, const int *lens, int n_arrs
 /* in-place cumulative sum */
 void cumsum(int *p, int n);
 
-#endif // UTILS_H
+#endif /* INTERNAL_UTILS_H */

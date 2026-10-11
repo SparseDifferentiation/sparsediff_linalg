@@ -33,8 +33,8 @@
  * limitations under the License.
  */
 
-#ifndef VEC_MACROS_H
-#define VEC_MACROS_H
+#ifndef INTERNAL_VEC_MACROS_H
+#define INTERNAL_VEC_MACROS_H
 
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
@@ -133,18 +133,6 @@
                                                                                     \
         memcpy(vec->data + vec->len, values, (size_t) n * sizeof(TYPE));            \
         vec->len += n;                                                              \
-    }                                                                               \
-    PSLP_UNUSED static int TYPE_NAME##Vec_contains(const TYPE_NAME##Vec *vec,       \
-                                                   TYPE value)                      \
-    {                                                                               \
-        for (int i = 0; i < vec->len; ++i)                                          \
-        {                                                                           \
-            if (vec->data[i] == value)                                              \
-            {                                                                       \
-                return 1; /* Element found */                                       \
-            }                                                                       \
-        }                                                                           \
-        return 0; /* Element not found */                                           \
     }
 
 #endif

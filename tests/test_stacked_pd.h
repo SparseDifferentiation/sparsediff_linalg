@@ -7,8 +7,7 @@
 #include "internal/stacked_pd_linalg.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/stacked_pd.h"
+#include "sparsediff_linalg/matrix.h"
 #include "test_helpers.h"
 #include <stdlib.h>
 #include <string.h>

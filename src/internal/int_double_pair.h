@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef INT_DOUBLE_PAIR_H
-#define INT_DOUBLE_PAIR_H
+#ifndef INTERNAL_INT_DOUBLE_PAIR_H
+#define INTERNAL_INT_DOUBLE_PAIR_H
 
 typedef struct int_double_pair
 {

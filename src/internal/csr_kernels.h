@@ -15,11 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LINALG_H
-#define LINALG_H
+#ifndef INTERNAL_CSR_KERNELS_H
+#define INTERNAL_CSR_KERNELS_H
+
+/* Private CSR / CSC kernels: used by the sparse kind's vtable, the matrix sums
+   and the permuted_dense operator role, never by consumers. */
 
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/matrix.h"
+
+/* Fills values of C = diag(d1) * A + diag(d2) * B (assuming C's sparsity is set)*/
+void sum_scaled_csr_matrices_fill_values(const CSR_matrix *A, const CSR_matrix *B,
+                                         CSR_matrix *C, const double *d1,
+                                         const double *d2);
 
 /* Compute sparsity pattern and values for the matrix-matrix multiplication
    C = (I_p kron A) @ J where A is m x n, J is (n*p) x k, and C is (m*p) x k,
@@ -44,15 +53,15 @@ void block_left_multiply_fill_values(const CSR_matrix *A, const CSC_matrix *J,
 */
 void block_left_multiply_vec(const CSR_matrix *A, const double *x, double *y, int p);
 
-/* Fill values of C = A @ B where A is CSR_matrix, B is CSC_matrix.
- * C must have sparsity pattern already computed.
- */
-void csr_csc_matmul_fill_values(const CSR_matrix *A, const CSC_matrix *B,
-                                CSR_matrix *C);
+/* C = (I_p kron A) @ J via the polymorphic matrix interface.
+ * A is dense m x n, J is (n*p) x k in CSC_matrix, C is (m*p) x k in CSC_matrix.
+ * `work` must be sized at least A->n doubles — used as a scratch buffer when
+ * a sparse column of J needs to be densified before dgemv. The caller is
+ * responsible for sizing it (typically pre-sized in the corresponding
+ * sparsity-build step). */
+// TODO: maybe we can replace these with I_kron_X functionality?
+CSC_matrix *I_kron_A_alloc(const matrix *A, const CSC_matrix *J, int p);
+void I_kron_A_fill_values(const matrix *A, const CSC_matrix *J, CSC_matrix *C,
+                          double *work);
 
-/* C = A @ B where A is CSR_matrix, B is CSC_matrix. Result C is CSR_matrix.
- * Allocates and precomputes sparsity pattern. No workspace required.
- */
-CSR_matrix *csr_csc_matmul_alloc(const CSR_matrix *A, const CSC_matrix *B);
-
-#endif /* LINALG_H */
+#endif /* INTERNAL_CSR_KERNELS_H */

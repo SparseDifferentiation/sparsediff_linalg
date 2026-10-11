@@ -19,10 +19,9 @@
 #define INTERNAL_SPARSE_MATRIX_H
 
 /* Private: the sparse kind's layout. Consumers see only matrix.h and the
-   constructors in sparsediff_linalg/sparse_matrix.h. */
+   constructors, both in matrix.h. */
 
 #include "sparsediff_linalg/matrix.h"
-#include "sparsediff_linalg/sparse_matrix.h"
 
 /* Sparse matrix wrapping CSR_matrix. csc_cache is a lazily-built CSC_matrix mirror
    used by the kernels that consume CSC (ATA / ATDA and the matmul dispatchers);

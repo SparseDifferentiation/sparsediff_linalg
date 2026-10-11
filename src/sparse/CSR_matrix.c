@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/int_double_pair.h"
+#include "internal/CSR_matrix.h"
 #include "sparsediff_linalg/tracked_alloc.h"
-#include "sparsediff_linalg/utils.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>

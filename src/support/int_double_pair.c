@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/int_double_pair.h"
+#include "internal/int_double_pair.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <stdlib.h>
 

@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 #include "sparsediff_linalg/CSC_matrix.h"
-#include "sparsediff_linalg/iVec.h"
+#include "internal/CSC_matrix.h"
+#include "internal/CSR_matrix.h"
+#include "internal/iVec.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <stdlib.h>

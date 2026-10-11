@@ -6,9 +6,7 @@
 #include "internal/stacked_pd.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/permuted_dense.h"
-#include "sparsediff_linalg/sparse_matrix.h"
-#include "sparsediff_linalg/stacked_pd.h"
+#include "sparsediff_linalg/matrix.h"
 #include "test_helpers.h"
 #include <math.h>
 #include <stdlib.h>

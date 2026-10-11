@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MATRIX_SUM_H
-#define MATRIX_SUM_H
+#ifndef INTERNAL_CSC_MATRIX_H
+#define INTERNAL_CSC_MATRIX_H
 
-#include "sparsediff_linalg/matrix.h"
+/* Private CSC kernels behind the sparse kind's ATA / ATDA vtable slots. */
 
-/* Polymorphic wrappers for allocating C = A + B. Right now we always
-   convert to CSR matrices internally for the sum. */
-void sum_matrices_alloc(matrix *A, matrix *B, matrix *C);
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 
-/* Fill values of C = A + B. Uses CSR matrices internally. */
-void sum_matrices_fill_values(matrix *A, matrix *B, matrix *C);
+/* Fill sparsity of C = A^T D A for diagonal D */
+CSR_matrix *ATA_alloc(const CSC_matrix *A);
 
-/* Fill values of C = diag(d1) * A + diag(d2) * B. Uses CSR matrices internally. */
-void sum_scaled_matrices_fill_values(matrix *A, matrix *B, matrix *C,
-                                     const double *d1, const double *d2);
+/* Compute values for C = A^T D A (null d corresponds to D as identity) */
+void ATDA_fill_values(const CSC_matrix *A, const double *d, CSR_matrix *C);
 
-#endif /* MATRIX_SUM_H */
+#endif /* INTERNAL_CSC_MATRIX_H */

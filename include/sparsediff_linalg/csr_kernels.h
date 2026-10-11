@@ -15,24 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef CSR_SUM_H
-#define CSR_SUM_H
+#ifndef CSR_KERNELS_H
+#define CSR_KERNELS_H
 
+#include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 
-/* forward declaration */
-struct int_double_pair;
+/* Kernels on the raw CSR / CSC formats, for consumers that build sparsity
+   patterns by hand: sums with index maps, sparse products and Kronecker
+   products, and the convolution matrix. Two-phase where applicable. */
+
+/* ---- sums ---- */
 
 /* Compute sparsity pattern of C = A + B (and sets C->nnz) */
 void sum_csr_alloc(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);
 
 /* Fills values of C = A + B (assuming C's sparsity pattern is set) */
 void sum_csr_fill_values(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);
-
-/* Fills values of C = diag(d1) * A + diag(d2) * B (assuming C's sparsity is set)*/
-void sum_scaled_csr_matrices_fill_values(const CSR_matrix *A, const CSR_matrix *B,
-                                         CSR_matrix *C, const double *d1,
-                                         const double *d2);
 
 /* The following two functions are used for summing either more than two CSR_matrix
    matrices or rows of CSR_matrix matrices. To implement the filling of values
@@ -66,4 +65,40 @@ void accumulator(const double *vals, int nnz, const int *idx_map, double *out);
 void accumulator_with_spacing(const CSR_matrix *A, const int *idx_map, double *out,
                               int spacing);
 
-#endif /* CSR_SUM_H */
+/* ---- products ---- */
+
+/* Fill values of C = A @ B where A is CSR_matrix, B is CSC_matrix.
+ * C must have sparsity pattern already computed.
+ */
+void csr_csc_matmul_fill_values(const CSR_matrix *A, const CSC_matrix *B,
+                                CSR_matrix *C);
+
+/* C = A @ B where A is CSR_matrix, B is CSC_matrix. Result C is CSR_matrix.
+ * Allocates and precomputes sparsity pattern. No workspace required.
+ */
+CSR_matrix *csr_csc_matmul_alloc(const CSR_matrix *A, const CSC_matrix *B);
+
+/* Sparsity and values of C = (Y^T kron I_m) @ J where Y is k x n, J is (m*k) x p,
+   and C is (m*n) x p. Y is given in column-major dense format. */
+CSR_matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_matrix *J);
+void YT_kron_I_fill_values(int m, int k, int n, const double *Y, const CSC_matrix *J,
+                           CSR_matrix *C);
+
+/* Sparsity and values of C = (I_n kron X) @ J where X is m x k (col-major dense),
+   J is (k*n) x p, and C is (m*n) x p. */
+CSR_matrix *I_kron_X_alloc(int m, int k, int n, const CSC_matrix *J);
+void I_kron_X_fill_values(int m, int k, int n, const double *X, const CSC_matrix *J,
+                          CSR_matrix *C);
+
+/* ---- convolution matrix ---- */
+
+/* Fill T_csr's row pointers and column indices for the 1D full-convolution
+   Toeplitz matrix T(a), sized (m+n-1) x n with m*n nonzeros. Values (x) are
+   not written; call conv_matrix_fill_values to populate them. */
+void conv_matrix_fill_sparsity(CSR_matrix *T_csr, int m, int n);
+
+/* Overwrite T_csr->x from kernel a, using the sparsity already written by
+   conv_matrix_fill_sparsity. T[r, col] = a[r - col]. */
+void conv_matrix_fill_values(CSR_matrix *T_csr, const double *a);
+
+#endif /* CSR_KERNELS_H */
