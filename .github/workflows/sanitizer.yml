@@ -1,0 +1,37 @@
+name: ASan+UBSan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install BLAS (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libopenblas-dev
+
+      # Note: a plain-scalar `run: cmake ... \` with backslash continuations
+      # folds into one line with the backslashes kept, silently dropping the
+      # -D flags (the job then built a plain default-config binary with no
+      # sanitizers). The > folded style below makes the flags actually apply.
+      - name: Configure with sanitizers
+        run: >
+          cmake -B build -S .
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      - name: Run tests under ASan+UBSan
+        run: ./build/sparsediff_linalg_tests

@@ -1,0 +1,39 @@
+name: CMake Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        build_type: [Release, Debug]
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install BLAS (Ubuntu)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y libopenblas-dev
+
+    - name: Install OpenBLAS (Windows)
+      if: runner.os == 'Windows'
+      run: vcpkg install openblas:x64-windows
+
+    - name: Configure CMake
+      run: >
+        cmake -B build -S .
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+        ${{ runner.os == 'Windows' && '-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake' || '' }}
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }}
+
+    - name: Run tests
+      run: ctest --test-dir build -C ${{ matrix.build_type }} --verbose
