@@ -407,7 +407,8 @@ static void assert_dense_kron_A_is_full(const matrix *A_m)
 }
 #endif
 
-matrix *BA_dense_kron_matrices_alloc(const matrix *A_m, int p, matrix *J)
+static matrix *dense_kron_alloc(const matrix *A_m, int p, matrix *J,
+                                kron_layout layout)
 {
 #ifndef NDEBUG
     assert_dense_kron_A_is_full(A_m);
@@ -416,20 +417,20 @@ matrix *BA_dense_kron_matrices_alloc(const matrix *A_m, int p, matrix *J)
 
     if (J->kind == MATRIX_PERMUTED_DENSE)
     {
-        return BA_dense_kron_pd_alloc(A, p, (const permuted_dense *) J);
+        return BA_dense_kron_pd_alloc(A, p, (const permuted_dense *) J, layout);
     }
     if (J->kind == MATRIX_STACKED_PD)
     {
-        return BA_dense_kron_spd_alloc(A, p, (const stacked_pd *) J);
+        return BA_dense_kron_spd_alloc(A, p, (const stacked_pd *) J, layout);
     }
     /* J is sparse */
     sparse_matrix *sm_J = (sparse_matrix *) J;
     sparse_matrix_ensure_csc_cache(sm_J);
-    return BA_dense_kron_csc_alloc(A, p, sm_J->csc_cache);
+    return BA_dense_kron_csc_alloc(A, p, sm_J->csc_cache, layout);
 }
 
-void BA_dense_kron_matrices_fill_values(const matrix *A_m, int p, const matrix *J,
-                                        matrix *C_m)
+static void dense_kron_fill_values(const matrix *A_m, int p, const matrix *J,
+                                   matrix *C_m, kron_layout layout)
 {
 #ifndef NDEBUG
     assert_dense_kron_A_is_full(A_m);
@@ -439,16 +440,38 @@ void BA_dense_kron_matrices_fill_values(const matrix *A_m, int p, const matrix *
     stacked_pd *C = (stacked_pd *) C_m;
     if (J->kind == MATRIX_PERMUTED_DENSE)
     {
-        BA_dense_kron_pd_fill_values(A, p, (const permuted_dense *) J, C);
+        BA_dense_kron_pd_fill_values(A, p, (const permuted_dense *) J, C, layout);
     }
     else if (J->kind == MATRIX_STACKED_PD)
     {
-        BA_dense_kron_spd_fill_values(A, p, (const stacked_pd *) J, C);
+        BA_dense_kron_spd_fill_values(A, p, (const stacked_pd *) J, C, layout);
     }
     else
     {
         /* J is sparse */
-        BA_dense_kron_csc_fill_values(A, p, sparse_csc_fresh(J), C);
+        BA_dense_kron_csc_fill_values(A, p, sparse_csc_fresh(J), C, layout);
     }
     matrix_values_changed(&C->base);
+}
+
+matrix *BA_dense_kron_matrices_alloc(const matrix *A, int p, matrix *J)
+{
+    return dense_kron_alloc(A, p, J, KRON_I_A);
+}
+
+void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
+                                        matrix *C)
+{
+    dense_kron_fill_values(A, p, J, C, KRON_I_A);
+}
+
+matrix *BA_dense_kron_I_matrices_alloc(const matrix *A, int m, matrix *J)
+{
+    return dense_kron_alloc(A, m, J, KRON_A_I);
+}
+
+void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *J,
+                                          matrix *C)
+{
+    dense_kron_fill_values(A, m, J, C, KRON_A_I);
 }

@@ -2948,4 +2948,179 @@ const char *test_BA_sparse_fill_no_transient_alloc(void)
 }
 #endif /* SP_TRACK_MEMORY */
 
+/* BA_dense_kron_I_matrices: C = kron(A, I_m) @ J against a dense reference.
+   A is a 2x3 full PD (p = 2, q = 3) and m = 2, so J is 6 x 5 and C is 4 x 5.
+   The three J fixtures: a sparse J; a PD J whose rows 0, 2, 4 are empty, so
+   block i = 0 of C is dropped; an spd J with two blocks sharing column 2. */
+static matrix *kron_I_A(void)
+{
+    double AX[6] = {1, 2, 3, 4, 5, 6};
+    return new_permuted_dense_full(2, 3, AX);
+}
+
+static matrix *kron_I_J_sparse(void)
+{
+    CSR_matrix *J = new_CSR_matrix(6, 5, 7);
+    int Jp[7] = {0, 1, 3, 3, 5, 6, 7};
+    int Ji[7] = {1, 0, 3, 2, 4, 1, 0};
+    double Jx[7] = {1, 2, 3, 4, 5, 6, 7};
+    memcpy(J->p, Jp, sizeof(Jp));
+    memcpy(J->i, Ji, sizeof(Ji));
+    memcpy(J->x, Jx, sizeof(Jx));
+    return new_sparse_matrix(J);
+}
+
+static matrix *kron_I_J_pd(void)
+{
+    int rp[3] = {1, 3, 5};
+    int cp[3] = {0, 2, 4};
+    double X[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    return new_permuted_dense(6, 5, 3, 3, rp, cp, X);
+}
+
+static matrix *kron_I_J_spd(void)
+{
+    int rp0[2] = {0, 1};
+    int cp0[2] = {1, 2};
+    double X0[4] = {1, 2, 3, 4};
+    matrix *blk0 = new_permuted_dense(6, 5, 2, 2, rp0, cp0, X0);
+    int rp1[2] = {3, 5};
+    int cp1[2] = {2, 4};
+    double X1[4] = {5, 6, 7, 8};
+    matrix *blk1 = new_permuted_dense(6, 5, 2, 2, rp1, cp1, X1);
+    permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
+    return new_stacked_pd(6, 5, 2, blocks, NULL, NULL);
+}
+
+/* Returns 0 or the failing message. */
+static const char *kron_I_matches_dense(matrix *A, int m, matrix *J, matrix *C,
+                                        const char *msg)
+{
+    int p = A->m, q = A->n, n = J->n;
+    int Km = p * m, Kn = q * m;
+    double *Kd = (double *) sp_calloc((size_t) Km * Kn, sizeof(double));
+    for (int c = 0; c < p; c++)
+        for (int j = 0; j < q; j++)
+            for (int i = 0; i < m; i++)
+                Kd[(c * m + i) * Kn + (j * m + i)] = A->x[c * q + j];
+    double *Jd = dense_of(J);
+    double *Cd = dense_of(C);
+    double *ref = (double *) sp_calloc((size_t) Km * n, sizeof(double));
+    for (int r = 0; r < Km; r++)
+        for (int l = 0; l < Kn; l++)
+            for (int col = 0; col < n; col++)
+                ref[r * n + col] += Kd[r * Kn + l] * Jd[l * n + col];
+    int ok = C->kind == MATRIX_STACKED_PD && C->m == Km && C->n == n &&
+             cmp_double_array(Cd, ref, Km * n);
+    sp_free(ref);
+    sp_free(Cd);
+    sp_free(Jd);
+    sp_free(Kd);
+    return ok ? 0 : msg;
+}
+
+/* Refilled after mutating A and J (J's mirror must refresh). */
+const char *test_BA_dense_kron_I_sparse_J(void)
+{
+    matrix *A = kron_I_A();
+    matrix *J = kron_I_J_sparse();
+    matrix *C = BA_dense_kron_I_matrices_alloc(A, 2, J);
+    BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
+    const char *err = kron_I_matches_dense(A, 2, J, C, "kron_I sparse first fill");
+    mu_assert(err ? err : "", err == 0);
+
+    ba_mutate(A);
+    ba_mutate(J);
+    BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
+    err =
+        kron_I_matches_dense(A, 2, J, C, "kron_I sparse refill after mutating A, J");
+    mu_assert(err ? err : "", err == 0);
+
+    free_matrix(C);
+    free_matrix(J);
+    free_matrix(A);
+    return 0;
+}
+
+const char *test_BA_dense_kron_I_pd_J(void)
+{
+    matrix *A = kron_I_A();
+    matrix *J = kron_I_J_pd();
+    matrix *C = BA_dense_kron_I_matrices_alloc(A, 2, J);
+    mu_assert("block 0 dropped", ((stacked_pd *) C)->n_blocks == 1);
+    BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
+    const char *err = kron_I_matches_dense(A, 2, J, C, "kron_I pd first fill");
+    mu_assert(err ? err : "", err == 0);
+
+    ba_mutate(A);
+    BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
+    err = kron_I_matches_dense(A, 2, J, C, "kron_I pd refill after mutating A");
+    mu_assert(err ? err : "", err == 0);
+
+    free_matrix(C);
+    free_matrix(J);
+    free_matrix(A);
+    return 0;
+}
+
+/* The spd path re-transposes A into its scratch per fill. */
+const char *test_BA_dense_kron_I_spd_J(void)
+{
+    matrix *A = kron_I_A();
+    matrix *J = kron_I_J_spd();
+    matrix *C = BA_dense_kron_I_matrices_alloc(A, 2, J);
+    BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
+    const char *err = kron_I_matches_dense(A, 2, J, C, "kron_I spd first fill");
+    mu_assert(err ? err : "", err == 0);
+
+    ba_mutate(A);
+    BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
+    err = kron_I_matches_dense(A, 2, J, C, "kron_I spd refill after mutating A");
+    mu_assert(err ? err : "", err == 0);
+
+    free_matrix(C);
+    free_matrix(J);
+    free_matrix(A);
+    return 0;
+}
+
+#ifdef SP_TRACK_MEMORY
+typedef struct
+{
+    matrix *A;
+    matrix *J;
+    matrix *C;
+} kron_I_fill_args;
+
+static void run_BA_dense_kron_I(const void *ctx)
+{
+    const kron_I_fill_args *a = (const kron_I_fill_args *) ctx;
+    BA_dense_kron_I_matrices_fill_values(a->A, 2, a->J, a->C);
+}
+
+/* None of the three kron_I cells allocates in its fill. */
+const char *test_BA_dense_kron_I_fill_no_transient_alloc(void)
+{
+    matrix *A = kron_I_A();
+    matrix *Js[3] = {kron_I_J_sparse(), kron_I_J_pd(), kron_I_J_spd()};
+    const char *msgs[3] = {"kron_I sparse fill allocates",
+                           "kron_I pd fill allocates", "kron_I spd fill allocates"};
+    for (int t = 0; t < 3; t++)
+    {
+        matrix *C = BA_dense_kron_I_matrices_alloc(A, 2, Js[t]);
+        kron_I_fill_args args = {A, Js[t], C};
+        run_BA_dense_kron_I(&args); /* warm-up */
+        int ok = fill_is_alloc_free(run_BA_dense_kron_I, &args);
+        free_matrix(C);
+        mu_assert(msgs[t], ok);
+    }
+    for (int t = 0; t < 3; t++)
+    {
+        free_matrix(Js[t]);
+    }
+    free_matrix(A);
+    return 0;
+}
+#endif /* SP_TRACK_MEMORY */
+
 #endif /* TEST_MATMUL_DISPATCHERS_H */
