@@ -223,12 +223,12 @@ const char *test_fill_refreshes_sparse_operand_BA_pd(void)
     double X[12] = {1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12};
     matrix *B = new_permuted_dense(5, 6, 3, 4, rp, cp, X);
     matrix *A = cc_make_A(CC_SPARSE);
-    matrix *C = BA_pd_matrices_alloc(B, A);
+    matrix *C = BA_matrices_alloc(B, A);
     double Bd[30], Ad[24], Cd[20], Cref[20];
     for (int pass = 0; pass < 2; pass++)
     {
         if (pass == 1) cc_scale(A, 3.0);
-        BA_pd_matrices_fill_values(B, A, C);
+        BA_matrices_fill_values(B, A, C);
         cc_to_dense(B, Bd);
         cc_to_dense(A, Ad);
         /* C = B A: C[i, j] = sum_k B[i, k] A[k, j] */
@@ -383,9 +383,9 @@ const char *test_public_fills_bump_output(void)
     int cp[4] = {1, 2, 3, 5};
     double X[12] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     matrix *Bl = new_permuted_dense(5, 6, 3, 4, rp, cp, X);
-    C = BA_pd_matrices_alloc(Bl, A);
+    C = BA_matrices_alloc(Bl, A);
     v = C->values_version;
-    BA_pd_matrices_fill_values(Bl, A, C);
+    BA_matrices_fill_values(Bl, A, C);
     mu_assert("BA_pd_matrices_fill_values bumps", cc_bumped_once(C, v));
     free_matrix(C);
     free_matrix(Bl);

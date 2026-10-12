@@ -44,12 +44,13 @@ matrix *BTA_matrices_alloc(matrix *A, matrix *B);
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C);
 
-/* Polymorphic dispatchers for C = B @ A, where B must be of kind
-   MATRIX_PERMUTED_DENSE (asserted) and A is any kind. The output C is always
-   permuted_dense. A sparse A is read through its CSC mirror, which the fill
-   refreshes itself. The fill bumps C's values_version. */
-matrix *BA_pd_matrices_alloc(const matrix *B, matrix *A);
-void BA_pd_matrices_fill_values(const matrix *B, const matrix *A, matrix *C);
+/* Polymorphic dispatchers for C = B @ A. Today B must be permuted_dense
+   (asserted; a sparse B lands with the sparse-left product) and A is any kind;
+   the output C is permuted_dense. A sparse A is read through its CSC mirror,
+   which the fill refreshes itself. The fill bumps C's values_version and
+   asserts C has the kind the alloc produced. */
+matrix *BA_matrices_alloc(const matrix *B, matrix *A);
+void BA_matrices_fill_values(const matrix *B, const matrix *A, matrix *C);
 
 /* Polymorphic dispatchers for C = kron(I_p, A) @ J, where A is a local dense
    matrix and J is any kind. The output C is always stacked_pd.

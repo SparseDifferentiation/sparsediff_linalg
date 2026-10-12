@@ -724,7 +724,7 @@ const char *test_permuted_dense_BTDA_partial_overlap(void)
     return 0;
 }
 
-/* BA_pd_matrices: C = B @ A where B is full-block PD (the production
+/* BA_matrices: C = B @ A where B is full-block PD (the production
    shape gated by left_matmul.c) and A is PD with non-trivial perms.
    B (2x3) row_perm=[0,1], col_perm=[0,1,2], X_B=[[1,2,3],[4,5,6]].
    A (3x5) row_perm=[0,2], col_perm=[1,4], X_A=[[7,8],[9,10]].
@@ -741,8 +741,8 @@ const char *test_BA_pd_matrices_pd_pd_full_block_B(void)
     double XA[4] = {7.0, 8.0, 9.0, 10.0};
     matrix *A_m = new_permuted_dense(3, 5, 2, 2, row_perm_A, col_perm_A, XA);
 
-    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
-    BA_pd_matrices_fill_values(B_m, A_m, C_m);
+    matrix *C_m = BA_matrices_alloc(B_m, A_m);
+    BA_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
@@ -762,7 +762,7 @@ const char *test_BA_pd_matrices_pd_pd_full_block_B(void)
     return 0;
 }
 
-/* BA_pd_matrices with general (non-full-block) B. B->col_perm and
+/* BA_matrices with general (non-full-block) B. B->col_perm and
    A->row_perm only partially overlap, exercising the
    sorted_intersect_indices gather path.
    B (2x5) row_perm=[0,1], col_perm=[1,3], X_B=[[1,2],[3,4]].
@@ -781,8 +781,8 @@ const char *test_BA_pd_matrices_pd_pd_general_B(void)
     double XA[4] = {5.0, 6.0, 7.0, 8.0};
     matrix *A_m = new_permuted_dense(5, 4, 2, 2, row_perm_A, col_perm_A, XA);
 
-    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
-    BA_pd_matrices_fill_values(B_m, A_m, C_m);
+    matrix *C_m = BA_matrices_alloc(B_m, A_m);
+    BA_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
@@ -802,7 +802,7 @@ const char *test_BA_pd_matrices_pd_pd_general_B(void)
     return 0;
 }
 
-/* BA_pd_matrices with sparse A. Same B and same global A content as the
+/* BA_matrices with sparse A. Same B and same global A content as the
    pd_pd_general_B test — the dispatcher routes through BA_pd_csc_*
    and should yield byte-identical output. */
 const char *test_BA_pd_matrices_pd_csc(void)
@@ -823,8 +823,8 @@ const char *test_BA_pd_matrices_pd_csc(void)
     memcpy(csr->x, Ax, 4 * sizeof(double));
     matrix *A_m = new_sparse_matrix(csr);
 
-    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
-    BA_pd_matrices_fill_values(B_m, A_m, C_m);
+    matrix *C_m = BA_matrices_alloc(B_m, A_m);
+    BA_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);
@@ -844,7 +844,7 @@ const char *test_BA_pd_matrices_pd_csc(void)
     return 0;
 }
 
-/* BA_pd_matrices dispatcher routes B(PD) @ A(spd) to BA_pd_spd_*. Fixture
+/* BA_matrices dispatcher routes B(PD) @ A(spd) to BA_pd_spd_*. Fixture
    mirrors test_BA_pd_spd_two_blocks_disjoint_cols; the assertion is that
    the dispatcher and the direct kernel produce identical output. */
 const char *test_BA_pd_matrices_spd_A(void)
@@ -867,8 +867,8 @@ const char *test_BA_pd_matrices_spd_A(void)
     permuted_dense *blocks[2] = {(permuted_dense *) A0, (permuted_dense *) A1};
     matrix *A = new_stacked_pd(4, 6, 2, blocks, NULL, NULL);
 
-    matrix *C_m = BA_pd_matrices_alloc(B, A);
-    BA_pd_matrices_fill_values(B, A, C_m);
+    matrix *C_m = BA_matrices_alloc(B, A);
+    BA_matrices_fill_values(B, A, C_m);
     permuted_dense *C = (permuted_dense *) C_m;
 
     mu_assert("C m", C_m->m == 3);
@@ -888,7 +888,7 @@ const char *test_BA_pd_matrices_spd_A(void)
     return 0;
 }
 
-/* BA_pd_matrices fast path: B->col_perm == A->row_perm exactly, so the
+/* BA_matrices fast path: B->col_perm == A->row_perm exactly, so the
    slow-path gather is skipped and one cblas_dgemm runs directly on
    B->X and A->X.
    B (2x4) row_perm=[0,1], col_perm=[1,3], X_B=[[1,2],[3,4]].
@@ -907,8 +907,8 @@ const char *test_BA_pd_matrices_fast_path(void)
     double XA[4] = {5.0, 6.0, 7.0, 8.0};
     matrix *A_m = new_permuted_dense(4, 3, 2, 2, row_perm_A, col_perm_A, XA);
 
-    matrix *C_m = BA_pd_matrices_alloc(B_m, A_m);
-    BA_pd_matrices_fill_values(B_m, A_m, C_m);
+    matrix *C_m = BA_matrices_alloc(B_m, A_m);
+    BA_matrices_fill_values(B_m, A_m, C_m);
 
     permuted_dense *C = (permuted_dense *) C_m;
     mu_assert("dim m", C_m->m == 2);

@@ -106,7 +106,9 @@ void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C)
     matrix_values_changed(C);
 }
 
-matrix *BA_pd_matrices_alloc(const matrix *B_m, matrix *A)
+/* C = B A. Only a permuted_dense B is dispatched yet; other kinds assert until
+   the sparse-left product lands. */
+matrix *BA_matrices_alloc(const matrix *B_m, matrix *A)
 {
     assert(B_m->kind == MATRIX_PERMUTED_DENSE);
     const permuted_dense *B = (const permuted_dense *) B_m;
@@ -125,7 +127,7 @@ matrix *BA_pd_matrices_alloc(const matrix *B_m, matrix *A)
     return BA_pd_csc_alloc(B, sm_A->csc_cache);
 }
 
-void BA_pd_matrices_fill_values(const matrix *B_m, const matrix *A, matrix *C_m)
+void BA_matrices_fill_values(const matrix *B_m, const matrix *A, matrix *C_m)
 {
     assert(B_m->kind == MATRIX_PERMUTED_DENSE);
     assert(C_m->kind == MATRIX_PERMUTED_DENSE);
