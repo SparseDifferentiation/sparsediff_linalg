@@ -21,6 +21,7 @@
 /* LEGACY: kept only as a test oracle for the library's own kernels. Compiled
    into sparsediff_linalg_tests, never into the library. Not part of the API. */
 
+#include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include <stdbool.h>
 
@@ -55,5 +56,19 @@ void insert_idx(int idx, int *arr, int len);
 
 /* computes dense y = Ax */
 void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset);
+
+/* CSR-output forms of matmul's chain-rule products, superseded by the kron
+   dispatchers (BA_dense_kron_I_matrices_* and BA_dense_kron_matrices_*). */
+/* Sparsity and values of C = (Y^T kron I_m) @ J where Y is k x n, J is (m*k) x p,
+   and C is (m*n) x p. Y is given in column-major dense format. */
+CSR_matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_matrix *J);
+void YT_kron_I_fill_values(int m, int k, int n, const double *Y, const CSC_matrix *J,
+                           CSR_matrix *C);
+
+/* Sparsity and values of C = (I_n kron X) @ J where X is m x k (col-major dense),
+   J is (k*n) x p, and C is (m*n) x p. */
+CSR_matrix *I_kron_X_alloc(int m, int k, int n, const CSC_matrix *J);
+void I_kron_X_fill_values(int m, int k, int n, const double *X, const CSC_matrix *J,
+                          CSR_matrix *C);
 
 #endif /* OLD_CSR_H */

@@ -2,11 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "legacy/old_CSR.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/csr_kernels.h"
+#include "sparsediff_linalg/dense.h"
+#include "sparsediff_linalg/matmul.h"
+#include "sparsediff_linalg/matrix.h"
+#include "sparsediff_linalg/tracked_alloc.h"
 #include "test_helpers.h"
+#include <math.h>
 
 /* Test YT_kron_I_alloc and YT_kron_I_fill_values
  *
@@ -225,4 +230,77 @@ const char *test_I_kron_X_larger(void)
     free_CSR_matrix(C);
     free_CSC_matrix(J);
     return NULL;
+}
+
+/* The kron dispatchers against the legacy CSR kernels on a random sparse J:
+   same pattern (both replicate one row pattern per block), same values up to
+   summation order. */
+static int csr_close(const CSR_matrix *A, const CSR_matrix *B)
+{
+    if (A->m != B->m || A->n != B->n || A->nnz != B->nnz) return 0;
+    if (!cmp_int_array(A->p, B->p, A->m + 1) || !cmp_int_array(A->i, B->i, A->nnz))
+        return 0;
+    for (int ii = 0; ii < A->nnz; ii++)
+    {
+        if (fabs(A->x[ii] - B->x[ii]) > 1e-12) return 0;
+    }
+    return 1;
+}
+
+const char *test_BA_dense_kron_I_matches_legacy_YT_kron_I(void)
+{
+    int m = 3, k = 2, n = 4;
+    double Y[8] = {1, -2, 0.5, 3, 2, -1, 4, 0.25}; /* k x n col-major */
+    CSR_matrix *J_csr = new_csr_random(m * k, 7, 0.4);
+    matrix *J = new_sparse_matrix(J_csr);
+
+    matrix *YT = new_permuted_dense_full(n, k, Y); /* col-major Y is row-major Y^T */
+    matrix *C = BA_dense_kron_I_matrices_alloc(YT, m, J);
+    BA_dense_kron_I_matrices_fill_values(YT, m, J, C);
+
+    int *iwork = (int *) sp_malloc(J_csr->n * sizeof(int));
+    CSC_matrix *J_csc = csr_to_csc_alloc(J_csr, iwork);
+    csr_to_csc_fill_values(J_csr, J_csc, iwork);
+    CSR_matrix *ref = YT_kron_I_alloc(m, k, n, J_csc);
+    YT_kron_I_fill_values(m, k, n, Y, J_csc, ref);
+
+    mu_assert("kron(Y^T, I_m) J differs from legacy", csr_close(C->to_csr(C), ref));
+
+    free_CSR_matrix(ref);
+    free_CSC_matrix(J_csc);
+    sp_free(iwork);
+    free_matrix(C);
+    free_matrix(YT);
+    free_matrix(J);
+    return 0;
+}
+
+const char *test_BA_dense_kron_matches_legacy_I_kron_X(void)
+{
+    int m = 3, k = 2, n = 4;
+    double X[6] = {1, -2, 0.5, 3, 2, -1}; /* m x k col-major */
+    CSR_matrix *J_csr = new_csr_random(k * n, 7, 0.4);
+    matrix *J = new_sparse_matrix(J_csr);
+
+    double X_rm[6];
+    A_transpose(X_rm, X, k, m);
+    matrix *X_pd = new_permuted_dense_full(m, k, X_rm);
+    matrix *C = BA_dense_kron_matrices_alloc(X_pd, n, J);
+    BA_dense_kron_matrices_fill_values(X_pd, n, J, C);
+
+    int *iwork = (int *) sp_malloc(J_csr->n * sizeof(int));
+    CSC_matrix *J_csc = csr_to_csc_alloc(J_csr, iwork);
+    csr_to_csc_fill_values(J_csr, J_csc, iwork);
+    CSR_matrix *ref = I_kron_X_alloc(m, k, n, J_csc);
+    I_kron_X_fill_values(m, k, n, X, J_csc, ref);
+
+    mu_assert("kron(I_n, X) J differs from legacy", csr_close(C->to_csr(C), ref));
+
+    free_CSR_matrix(ref);
+    free_CSC_matrix(J_csc);
+    sp_free(iwork);
+    free_matrix(C);
+    free_matrix(X_pd);
+    free_matrix(J);
+    return 0;
 }

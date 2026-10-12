@@ -68,18 +68,6 @@ void csr_csc_matmul_fill_values(const CSR_matrix *A, const CSC_matrix *B,
  */
 CSR_matrix *csr_csc_matmul_alloc(const CSR_matrix *A, const CSC_matrix *B);
 
-/* Sparsity and values of C = (Y^T kron I_m) @ J where Y is k x n, J is (m*k) x p,
-   and C is (m*n) x p. Y is given in column-major dense format. */
-CSR_matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_matrix *J);
-void YT_kron_I_fill_values(int m, int k, int n, const double *Y, const CSC_matrix *J,
-                           CSR_matrix *C);
-
-/* Sparsity and values of C = (I_n kron X) @ J where X is m x k (col-major dense),
-   J is (k*n) x p, and C is (m*n) x p. */
-CSR_matrix *I_kron_X_alloc(int m, int k, int n, const CSC_matrix *J);
-void I_kron_X_fill_values(int m, int k, int n, const double *X, const CSC_matrix *J,
-                          CSR_matrix *C);
-
 /* ---- convolution matrix ---- */
 
 /* Fill T_csr's row pointers and column indices for the 1D full-convolution
