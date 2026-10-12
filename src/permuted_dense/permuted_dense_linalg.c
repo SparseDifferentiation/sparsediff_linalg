@@ -62,6 +62,17 @@ permuted_dense *permuted_dense_ensure_transpose_cache(const permuted_dense *B_co
     return BT;
 }
 
+permuted_dense *permuted_dense_transpose_fresh(const permuted_dense *B)
+{
+    permuted_dense *BT = permuted_dense_ensure_transpose_cache(B);
+    if (BT->transpose_seen != B->base.values_version)
+    {
+        transpose_pd_fill_values(B, BT);
+        BT->transpose_seen = B->base.values_version;
+    }
+    return BT;
+}
+
 void DA_pd_fill_values(const double *d, const permuted_dense *A, permuted_dense *C)
 {
     int m0 = A->m0;

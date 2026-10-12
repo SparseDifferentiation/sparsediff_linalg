@@ -612,7 +612,7 @@ void BTDA_csc_spd_fill_values(const CSC_matrix *B, const double *d,
 // wrapper over the canonical BTA_pd_spd_* kernel: use B's lazily-cached
 // transpose and call BTA. The cache is populated on first call (in alloc)
 // and reused across subsequent fills; its values are refreshed only when
-// B's values_version has moved since the last fill (transpose_seen).
+// B's values_version has moved since the last fill (permuted_dense_transpose_fresh).
 //
 // Contract: B's perms must be immutable between alloc and fill (the cache
 // records B's perms at alloc time and is not re-validated at fill). For
@@ -633,13 +633,7 @@ matrix *BA_pd_spd_alloc(const permuted_dense *B, const stacked_pd *A)
 void BA_pd_spd_fill_values(const permuted_dense *B, const stacked_pd *A,
                            permuted_dense *C)
 {
-    permuted_dense *BT = B->transpose_cache;
-    if (BT->transpose_seen != B->base.values_version)
-    {
-        transpose_pd_fill_values(B, BT);
-        BT->transpose_seen = B->base.values_version;
-    }
-    BTA_pd_spd_fill_values(BT, A, C);
+    BTA_pd_spd_fill_values(permuted_dense_transpose_fresh(B), A, C);
 }
 
 // ====================================================================================
