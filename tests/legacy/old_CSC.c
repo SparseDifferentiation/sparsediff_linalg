@@ -158,3 +158,27 @@ int count_nonzero_cols_csc(const CSC_matrix *A)
     }
     return count;
 }
+
+void yTA_fill_values(const CSC_matrix *A, const double *y, CSR_matrix *C)
+{
+    for (int col = 0; col < A->n; col++)
+    {
+        double val = 0;
+        for (int j = A->p[col]; j < A->p[col + 1]; j++)
+        {
+            val += y[A->i[j]] * A->x[j];
+        }
+
+        if (A->p[col + 1] - A->p[col] == 0) continue;
+
+        /* find position in C and fill value */
+        for (int k = 0; k < C->nnz; k++)
+        {
+            if (C->i[k] == col)
+            {
+                C->x[k] = val;
+                break;
+            }
+        }
+    }
+}

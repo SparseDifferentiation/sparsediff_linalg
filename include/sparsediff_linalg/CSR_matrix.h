@@ -17,7 +17,6 @@
  */
 #ifndef CSR_matrix_H
 #define CSR_matrix_H
-#include <stdbool.h>
 
 /* CSR_matrix (Compressed Sparse Row) matrix Format
  *
@@ -57,11 +56,5 @@ void AT_fill_values(const CSR_matrix *A, CSR_matrix *AT, int *iwork);
 
 /* computes dense y = Ax */
 void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset);
-
-/* Count number of columns with nonzero entries in A and marks them in col_nz */
-int count_nonzero_cols(const CSR_matrix *A, bool *col_nz);
-
-/* inserts 'idx' into array 'arr' in sorted order, and moves the other elements */
-void insert_idx(int idx, int *arr, int len);
 
 #endif /* CSR_matrix_H */

@@ -22,6 +22,7 @@
    into sparsediff_linalg_tests, never into the library. Not part of the API. */
 
 #include "sparsediff_linalg/CSR_matrix.h"
+#include <stdbool.h>
 
 /* Build (I_p kron A) = blkdiag(A, A, ..., A) of size (p*A->m) x (p*A->n) */
 CSR_matrix *block_diag_repeat_csr(const CSR_matrix *A, int p);
@@ -45,5 +46,11 @@ void diag_csr_mult(const double *d, const CSR_matrix *A, CSR_matrix *C);
 
 /* y = Ax, where y is returned as dense (no column offset) */
 void Ax_csr_wo_offset(const CSR_matrix *A, const double *x, double *y);
+
+/* Count number of columns with nonzero entries in A and marks them in col_nz */
+int count_nonzero_cols(const CSR_matrix *A, bool *col_nz);
+
+/* inserts 'idx' into array 'arr' in sorted order, and moves the other elements */
+void insert_idx(int idx, int *arr, int len);
 
 #endif /* OLD_CSR_H */

@@ -51,9 +51,6 @@ CSR_matrix *BTA_alloc(const CSC_matrix *A, const CSC_matrix *B);
 void BTDA_fill_values(const CSC_matrix *A, const CSC_matrix *B, const double *d,
                       CSR_matrix *C);
 
-/* Fill values of C = x^T A. The matrix C must have filled sparsity. */
-void yTA_fill_values(const CSC_matrix *A, const double *x, CSR_matrix *C);
-
 /* convert from CSR_matrix to CSC_matrix format */
 CSC_matrix *csr_to_csc_alloc(const CSR_matrix *A, int *iwork);
 void csr_to_csc_fill_values(const CSR_matrix *A, CSC_matrix *C, int *iwork);
