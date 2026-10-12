@@ -35,4 +35,7 @@ void BA_fill_values(const CSR_matrix *B, const CSC_matrix *A, CSC_matrix *C);
 /* Count nonzero columns of a CSC_matrix matrix */
 int count_nonzero_cols_csc(const CSC_matrix *A);
 
+/* Fill values of C = x^T A. The matrix C must have filled sparsity. */
+void yTA_fill_values(const CSC_matrix *A, const double *x, CSR_matrix *C);
+
 #endif /* OLD_CSC_H */

@@ -96,38 +96,6 @@ void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset)
     }
 }
 
-int count_nonzero_cols(const CSR_matrix *A, bool *col_nz)
-{
-    for (int row = 0; row < A->m; row++)
-    {
-        for (int j = A->p[row]; j < A->p[row + 1]; j++)
-        {
-            col_nz[A->i[j]] = true;
-        }
-    }
-    int count = 0;
-    for (int col = 0; col < A->n; col++)
-    {
-        if (col_nz[col]) count++;
-    }
-
-    return count;
-}
-
-void insert_idx(int idx, int *arr, int len)
-{
-    int j = 0;
-
-    while (j < len && arr[j] < idx)
-    {
-        j++;
-    }
-
-    // move elements to the right
-    memmove(arr + (j + 1), arr + j, (len - j) * sizeof(int));
-    arr[j] = idx;
-}
-
 void DA_fill_values(const double *d, const CSR_matrix *A, CSR_matrix *C)
 {
     memcpy(C->x, A->x, A->nnz * sizeof(double));
