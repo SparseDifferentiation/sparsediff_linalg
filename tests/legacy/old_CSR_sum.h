@@ -80,4 +80,16 @@ void sum_block_of_rows_csr_alloc(const CSR_matrix *A, CSR_matrix *C,
 void sum_evenly_spaced_rows_csr_alloc(const CSR_matrix *A, CSR_matrix *C,
                                       int row_spacing, int *iwork, int *idx_map);
 
+/* Retired by the engine's trace atom (now row_gather + row_reduce). Sums the
+   rows of A at multiples of `spacing` into the single-row C and fills idx_map
+   (size A->nnz): idx_map[j] is the position in C->x of A's j-th nonzero.
+   iwork must hold max(A->n, A->nnz) ints. */
+void sum_spaced_rows_into_row_csr_alloc(const CSR_matrix *A, CSR_matrix *C,
+                                        int spacing, int *iwork, int *idx_map);
+
+/* Accumulates values from A according to map with spacing. Must memset to zero
+ * before calling. */
+void accumulator_with_spacing(const CSR_matrix *A, const int *idx_map, double *out,
+                              int spacing);
+
 #endif /* OLD_CSR_SUM_H */

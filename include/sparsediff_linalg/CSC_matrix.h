@@ -47,21 +47,12 @@ void free_CSC_matrix(CSC_matrix *matrix);
 /* Fill sparsity of C = B^T D A for diagonal D */
 CSR_matrix *BTA_alloc(const CSC_matrix *A, const CSC_matrix *B);
 
-/* Fill sparsity of C = BA, where B is symmetric. */
-CSC_matrix *symBA_alloc(const CSR_matrix *B, const CSC_matrix *A);
-
 /* Compute values for C = B^T D A (null d corresonds to D as identity) */
 void BTDA_fill_values(const CSC_matrix *A, const CSC_matrix *B, const double *d,
                       CSR_matrix *C);
 
-/* Fill values of C = BA. The matrix B does not have to be symmetric */
-void BA_fill_values(const CSR_matrix *B, const CSC_matrix *A, CSC_matrix *C);
-
 /* Fill values of C = x^T A. The matrix C must have filled sparsity. */
 void yTA_fill_values(const CSC_matrix *A, const double *x, CSR_matrix *C);
-
-/* Count nonzero columns of a CSC_matrix matrix */
-int count_nonzero_cols_csc(const CSC_matrix *A);
 
 /* convert from CSR_matrix to CSC_matrix format */
 CSC_matrix *csr_to_csc_alloc(const CSR_matrix *A, int *iwork);
