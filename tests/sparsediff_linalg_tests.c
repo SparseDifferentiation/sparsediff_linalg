@@ -167,6 +167,12 @@ int main(void)
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_sum_4_matrices_fill_no_transient_alloc, tests_run);
 #endif
+    mu_run_test(test_BA_sparse_matrices_pd_A, tests_run);
+    mu_run_test(test_BA_sparse_matrices_spd_A, tests_run);
+    mu_run_test(test_BA_sparse_matrices_csc_A, tests_run);
+#ifdef SP_TRACK_MEMORY
+    mu_run_test(test_BA_sparse_fill_no_transient_alloc, tests_run);
+#endif
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_BTA_pd_csc_fill_no_transient_alloc, tests_run);
 #endif

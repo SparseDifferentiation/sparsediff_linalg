@@ -20,6 +20,7 @@
 #include "internal/stacked_pd_linalg.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/csr_kernels.h"
 #include <assert.h>
 
 /* Forward declarations of the fixed-B dispatchers used internally by
@@ -54,8 +55,8 @@ matrix *BTA_matrices_alloc(matrix *A, matrix *B)
     return BTA_sparse_matrices_alloc((const sparse_matrix *) B, A);
 }
 
-/* The output kind an alloc produced for (B, A): B PD -> PD, B spd -> spd,
-   B sparse -> A's kind. Used by the fills' kind asserts. */
+/* The output kind the BTA and BA allocs produce for (B, A): B PD -> PD,
+   B spd -> spd, B sparse -> A's kind. Used by the fills' kind asserts. */
 #ifndef NDEBUG
 static matrix_kind BTA_output_kind(const matrix *A, const matrix *B)
 {
@@ -106,12 +107,8 @@ void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C)
     matrix_values_changed(C);
 }
 
-/* C = B A. Only a permuted_dense B is dispatched yet; other kinds assert until
-   the sparse-left product lands. */
-matrix *BA_matrices_alloc(const matrix *B_m, matrix *A)
+static matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
 {
-    assert(B_m->kind == MATRIX_PERMUTED_DENSE);
-    const permuted_dense *B = (const permuted_dense *) B_m;
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
         return BA_pd_pd_alloc(B, (const permuted_dense *) A);
@@ -127,26 +124,101 @@ matrix *BA_matrices_alloc(const matrix *B_m, matrix *A)
     return BA_pd_csc_alloc(B, sm_A->csc_cache);
 }
 
-void BA_matrices_fill_values(const matrix *B_m, const matrix *A, matrix *C_m)
+static void BA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
+                                       permuted_dense *C)
 {
-    assert(B_m->kind == MATRIX_PERMUTED_DENSE);
-    assert(C_m->kind == MATRIX_PERMUTED_DENSE);
-    const permuted_dense *B = (const permuted_dense *) B_m;
-    permuted_dense *C = (permuted_dense *) C_m;
     if (A->kind == MATRIX_PERMUTED_DENSE)
     {
         BA_pd_pd_fill_values(B, (const permuted_dense *) A, C);
+        return;
     }
-    else if (A->kind == MATRIX_STACKED_PD)
+    if (A->kind == MATRIX_STACKED_PD)
     {
         BA_pd_spd_fill_values(B, (const stacked_pd *) A, C);
+        return;
+    }
+
+    /* A is sparse */
+    BA_pd_csc_fill_values(B->X, B->n0, B->col_inv, sparse_csc_fresh(A), C);
+}
+
+/* CSR_matrix and CSC_matrix are the same struct, so the CSC reading of a CSR's
+   arrays is its transpose: column j of A^T is row j of A, the stored indices
+   are A^T's row indices, and x aliases A's live values. A sparse B feeds the
+   CSC-left kernels (C = B_csc^T A) as this view of B^T with no transpose
+   formed and nothing to refresh. */
+static CSC_matrix csc_transpose_view(const CSR_matrix *A)
+{
+    CSC_matrix AT = {A->p, A->i, A->x, A->n, A->m, A->nnz};
+    return AT;
+}
+
+static matrix *BA_sparse_matrices_alloc(const sparse_matrix *B, matrix *A)
+{
+    CSC_matrix BT = csc_transpose_view(B->csr);
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        return BTA_csc_pd_alloc(&BT, (const permuted_dense *) A);
+    }
+    if (A->kind == MATRIX_STACKED_PD)
+    {
+        return BTA_csc_spd_alloc(&BT, (const stacked_pd *) A);
+    }
+
+    /* A is sparse: B's CSR against A's mirror, straight into a CSR. */
+    sparse_matrix *sm_A = (sparse_matrix *) A;
+    sparse_matrix_ensure_csc_cache(sm_A);
+    return new_sparse_matrix(csr_csc_matmul_alloc(B->csr, sm_A->csc_cache));
+}
+
+static void BA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix *A,
+                                           matrix *C)
+{
+    CSC_matrix BT = csc_transpose_view(B->csr);
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        BTA_csc_pd_fill_values(&BT, (const permuted_dense *) A,
+                               (permuted_dense *) C);
+        return;
+    }
+    if (A->kind == MATRIX_STACKED_PD)
+    {
+        BTA_csc_spd_fill_values(&BT, (const stacked_pd *) A, (stacked_pd *) C);
+        return;
+    }
+
+    /* A is sparse */
+    csr_csc_matmul_fill_values(B->csr, sparse_csc_fresh(A),
+                               ((sparse_matrix *) C)->csr);
+}
+
+/* C = B A for a permuted_dense or sparse B; a stacked_pd B asserts. */
+matrix *BA_matrices_alloc(const matrix *B_m, matrix *A)
+{
+    assert(B_m->kind != MATRIX_STACKED_PD);
+    if (B_m->kind == MATRIX_PERMUTED_DENSE)
+    {
+        return BA_pd_matrices_alloc((const permuted_dense *) B_m, A);
+    }
+    /* B is sparse_matrix */
+    return BA_sparse_matrices_alloc((const sparse_matrix *) B_m, A);
+}
+
+void BA_matrices_fill_values(const matrix *B_m, const matrix *A, matrix *C_m)
+{
+    assert(B_m->kind != MATRIX_STACKED_PD);
+    assert(C_m->kind == BTA_output_kind(A, B_m));
+    if (B_m->kind == MATRIX_PERMUTED_DENSE)
+    {
+        BA_pd_matrices_fill_values((const permuted_dense *) B_m, A,
+                                   (permuted_dense *) C_m);
     }
     else
     {
-        /* A is sparse */
-        BA_pd_csc_fill_values(B->X, B->n0, B->col_inv, sparse_csc_fresh(A), C);
+        /* B is sparse_matrix */
+        BA_sparse_matrices_fill_values((const sparse_matrix *) B_m, A, C_m);
     }
-    matrix_values_changed(&C->base);
+    matrix_values_changed(C_m);
 }
 
 static matrix *BTA_pd_matrices_alloc(const permuted_dense *B, matrix *A)

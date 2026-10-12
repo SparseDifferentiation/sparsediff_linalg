@@ -2616,7 +2616,7 @@ const char *test_BTA_pd_csc_fill_no_transient_alloc(void)
 #endif /* SP_TRACK_MEMORY */
 
 /* Dense row-major copy of a handle's current values, read through to_csr. */
-static double *s4_dense_of(matrix *M)
+static double *dense_of(matrix *M)
 {
     CSR_matrix *csr = M->to_csr(M);
     double *out = (double *) sp_calloc((size_t) M->m * M->n, sizeof(double));
@@ -2689,11 +2689,11 @@ const char *test_sum_4_matrices_mixed_kinds(void)
         }
         sum_4_matrices_fill_values(A, B, D, E, C);
 
-        double *ref = s4_dense_of(A);
-        double *dB = s4_dense_of(B);
-        double *dD = s4_dense_of(D);
-        double *dE = s4_dense_of(E);
-        double *got = s4_dense_of(C);
+        double *ref = dense_of(A);
+        double *dB = dense_of(B);
+        double *dD = dense_of(D);
+        double *dE = dense_of(E);
+        double *got = dense_of(C);
         for (int k = 0; k < 30; k++) ref[k] += dB[k] + dD[k] + dE[k];
         mu_assert("sum matches dense reference", cmp_double_array(got, ref, 30));
         sp_free(ref);
@@ -2738,6 +2738,212 @@ const char *test_sum_4_matrices_fill_no_transient_alloc(void)
     free_matrix(D);
     free_matrix(B);
     free_matrix(A);
+    return 0;
+}
+#endif /* SP_TRACK_MEMORY */
+
+/* BA_matrices with a sparse B (3x4): row 0 hits k = {0, 2}, row 1 hits
+   k = {1, 3}, row 2 hits only k = 0. The PD and spd fixtures below leave
+   row 0 of A structurally empty, so B's row 2 is dropped from a PD / spd
+   output. */
+static matrix *ba_sparse_B(void)
+{
+    CSR_matrix *B_csr = new_CSR_matrix(3, 4, 5);
+    int Bp[4] = {0, 2, 4, 5};
+    int Bi[5] = {0, 2, 1, 3, 0};
+    double Bx[5] = {1, 2, 3, -1, 0.5};
+    memcpy(B_csr->p, Bp, sizeof(Bp));
+    memcpy(B_csr->i, Bi, sizeof(Bi));
+    memcpy(B_csr->x, Bx, sizeof(Bx));
+    return new_sparse_matrix(B_csr);
+}
+
+/* Compare C against a dense triple-loop reference of B A read through
+   dense_of. Returns 0 or the failing message. */
+static const char *ba_matches_dense(matrix *B, matrix *A, matrix *C, const char *msg)
+{
+    int m = B->m, k = B->n, n = A->n;
+    double *Bd = dense_of(B);
+    double *Ad = dense_of(A);
+    double *Cd = dense_of(C);
+    double *ref = (double *) sp_calloc((size_t) m * n, sizeof(double));
+    for (int i = 0; i < m; i++)
+        for (int l = 0; l < k; l++)
+            for (int j = 0; j < n; j++)
+                ref[i * n + j] += Bd[i * k + l] * Ad[l * n + j];
+    int ok = C->m == m && C->n == n && cmp_double_array(Cd, ref, m * n);
+    sp_free(ref);
+    sp_free(Cd);
+    sp_free(Ad);
+    sp_free(Bd);
+    return ok ? 0 : msg;
+}
+
+/* Rewrite every stored value of M and bump its version. */
+static void ba_mutate(matrix *M)
+{
+    for (int ii = 0; ii < M->nnz; ii++)
+    {
+        M->x[ii] = -2.0 * M->x[ii] + 1.0;
+    }
+    matrix_values_changed(M);
+}
+
+/* sparse B x PD A -> PD C, refilled after mutating B. */
+const char *test_BA_sparse_matrices_pd_A(void)
+{
+    matrix *B = ba_sparse_B();
+    int A_rp[3] = {1, 2, 3};
+    int A_cp[3] = {0, 2, 4};
+    double AX[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    matrix *A = new_permuted_dense(4, 5, 3, 3, A_rp, A_cp, AX);
+
+    matrix *C = BA_matrices_alloc(B, A);
+    mu_assert("sparse x pd gives pd", C->kind == MATRIX_PERMUTED_DENSE);
+    mu_assert("row 2 of B dropped", ((permuted_dense *) C)->m0 == 2);
+    BA_matrices_fill_values(B, A, C);
+    const char *err = ba_matches_dense(B, A, C, "sparse x pd first fill");
+    mu_assert(err ? err : "", err == 0);
+
+    ba_mutate(B);
+    BA_matrices_fill_values(B, A, C);
+    err = ba_matches_dense(B, A, C, "sparse x pd refill after mutating B");
+    mu_assert(err ? err : "", err == 0);
+
+    free_matrix(C);
+    free_matrix(A);
+    free_matrix(B);
+    return 0;
+}
+
+/* sparse B x spd A (two blocks sharing column 2) -> spd C, refilled after
+   mutating B. */
+const char *test_BA_sparse_matrices_spd_A(void)
+{
+    matrix *B = ba_sparse_B();
+    int A0_rp[2] = {1, 2};
+    int A0_cp[2] = {1, 2};
+    double A0X[4] = {1, 2, 3, 4};
+    matrix *blk0 = new_permuted_dense(4, 5, 2, 2, A0_rp, A0_cp, A0X);
+    int A1_rp[1] = {3};
+    int A1_cp[2] = {2, 4};
+    double A1X[2] = {5, 6};
+    matrix *blk1 = new_permuted_dense(4, 5, 1, 2, A1_rp, A1_cp, A1X);
+    permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
+    matrix *A = new_stacked_pd(4, 5, 2, blocks, NULL, NULL);
+
+    matrix *C = BA_matrices_alloc(B, A);
+    mu_assert("sparse x spd gives spd", C->kind == MATRIX_STACKED_PD);
+    BA_matrices_fill_values(B, A, C);
+    const char *err = ba_matches_dense(B, A, C, "sparse x spd first fill");
+    mu_assert(err ? err : "", err == 0);
+
+    ba_mutate(B);
+    BA_matrices_fill_values(B, A, C);
+    err = ba_matches_dense(B, A, C, "sparse x spd refill after mutating B");
+    mu_assert(err ? err : "", err == 0);
+
+    free_matrix(C);
+    free_matrix(A);
+    free_matrix(B);
+    return 0;
+}
+
+/* sparse B x sparse A -> sparse C, refilled after mutating both operands (A's
+   CSC mirror must refresh). */
+const char *test_BA_sparse_matrices_csc_A(void)
+{
+    matrix *B = ba_sparse_B();
+    CSR_matrix *A_csr = new_CSR_matrix(4, 5, 6);
+    int Ap[5] = {0, 2, 3, 5, 6};
+    int Ai[6] = {1, 4, 2, 0, 3, 4};
+    double Ax[6] = {1, 2, 3, 4, 5, 6};
+    memcpy(A_csr->p, Ap, sizeof(Ap));
+    memcpy(A_csr->i, Ai, sizeof(Ai));
+    memcpy(A_csr->x, Ax, sizeof(Ax));
+    matrix *A = new_sparse_matrix(A_csr);
+
+    matrix *C = BA_matrices_alloc(B, A);
+    mu_assert("sparse x sparse gives sparse", C->kind == MATRIX_SPARSE);
+    BA_matrices_fill_values(B, A, C);
+    const char *err = ba_matches_dense(B, A, C, "sparse x sparse first fill");
+    mu_assert(err ? err : "", err == 0);
+
+    ba_mutate(B);
+    ba_mutate(A);
+    BA_matrices_fill_values(B, A, C);
+    err = ba_matches_dense(B, A, C, "sparse x sparse refill after mutating B, A");
+    mu_assert(err ? err : "", err == 0);
+
+    free_matrix(C);
+    free_matrix(A);
+    free_matrix(B);
+    return 0;
+}
+
+#ifdef SP_TRACK_MEMORY
+typedef struct
+{
+    matrix *B;
+    matrix *A;
+    matrix *C;
+} ba_fill_args;
+
+static void run_BA_matrices(const void *ctx)
+{
+    const ba_fill_args *a = (const ba_fill_args *) ctx;
+    BA_matrices_fill_values(a->B, a->A, a->C);
+}
+
+/* The sparse-B fills read B in place and A through caches the alloc built, so
+   none of the three cells allocates. */
+const char *test_BA_sparse_fill_no_transient_alloc(void)
+{
+    matrix *B = ba_sparse_B();
+
+    int A_rp[3] = {1, 2, 3};
+    int A_cp[3] = {0, 2, 4};
+    double AX[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    matrix *A_pd = new_permuted_dense(4, 5, 3, 3, A_rp, A_cp, AX);
+
+    int A0_rp[2] = {1, 2};
+    int A0_cp[2] = {1, 2};
+    double A0X[4] = {1, 2, 3, 4};
+    matrix *blk0 = new_permuted_dense(4, 5, 2, 2, A0_rp, A0_cp, A0X);
+    int A1_rp[1] = {3};
+    int A1_cp[2] = {2, 4};
+    double A1X[2] = {5, 6};
+    matrix *blk1 = new_permuted_dense(4, 5, 1, 2, A1_rp, A1_cp, A1X);
+    permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
+    matrix *A_spd = new_stacked_pd(4, 5, 2, blocks, NULL, NULL);
+
+    CSR_matrix *A_csr = new_CSR_matrix(4, 5, 6);
+    int Ap[5] = {0, 2, 3, 5, 6};
+    int Ai[6] = {1, 4, 2, 0, 3, 4};
+    double Ax[6] = {1, 2, 3, 4, 5, 6};
+    memcpy(A_csr->p, Ap, sizeof(Ap));
+    memcpy(A_csr->i, Ai, sizeof(Ai));
+    memcpy(A_csr->x, Ax, sizeof(Ax));
+    matrix *A_sm = new_sparse_matrix(A_csr);
+
+    matrix *As[3] = {A_pd, A_spd, A_sm};
+    const char *msgs[3] = {"sparse x pd BA fill allocates",
+                           "sparse x spd BA fill allocates",
+                           "sparse x sparse BA fill allocates"};
+    for (int t = 0; t < 3; t++)
+    {
+        matrix *C = BA_matrices_alloc(B, As[t]);
+        ba_fill_args args = {B, As[t], C};
+        run_BA_matrices(&args); /* warm-up */
+        int ok = fill_is_alloc_free(run_BA_matrices, &args);
+        free_matrix(C);
+        mu_assert(msgs[t], ok);
+    }
+
+    free_matrix(A_sm);
+    free_matrix(A_spd);
+    free_matrix(A_pd);
+    free_matrix(B);
     return 0;
 }
 #endif /* SP_TRACK_MEMORY */
