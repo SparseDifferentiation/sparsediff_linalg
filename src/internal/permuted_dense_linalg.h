@@ -100,4 +100,10 @@ void transpose_pd_fill_values(const permuted_dense *A, permuted_dense *C);
    sparse_matrix_ensure_csc_cache's convention. */
 permuted_dense *permuted_dense_ensure_transpose_cache(const permuted_dense *B);
 
+/* Ensure B's transpose cache and refresh its values iff B's values_version
+   moved since the last refresh, then return it. Same contract as the ensure:
+   B owns its value buffer (not an spd block, which has no version of its own)
+   and its perms are immutable between alloc and fill. */
+permuted_dense *permuted_dense_transpose_fresh(const permuted_dense *B);
+
 #endif /* PERMUTED_DENSE_LINALG_H */

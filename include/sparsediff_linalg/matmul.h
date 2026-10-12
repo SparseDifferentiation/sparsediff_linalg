@@ -36,8 +36,10 @@
      - B is sparse_matrix, A is sparse  -> output is sparse_matrix.
 
    Sparse operands are read through their CSC mirror, which the fill refreshes
-   itself (version-guarded). Every fill bumps C's values_version. The fills
-   assert that C has the kind the matching alloc produced. */
+   itself (version-guarded); a permuted_dense B against a sparse A is read
+   through B's transpose cache, refreshed iff B's values changed. Every fill
+   bumps C's values_version. The fills assert that C has the kind the matching
+   alloc produced. */
 matrix *BTA_matrices_alloc(matrix *A, matrix *B);
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C);

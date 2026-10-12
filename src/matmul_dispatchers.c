@@ -158,9 +158,11 @@ static matrix *BTA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
         return BTA_pd_spd_alloc(B, (const stacked_pd *) A);
     }
 
-    /* A is sparse */
+    /* A is sparse. The fill reads B^T from B's transpose cache; build it here
+       so the fill never allocates. */
     sparse_matrix *sm_A = (sparse_matrix *) A;
     sparse_matrix_ensure_csc_cache(sm_A);
+    permuted_dense_ensure_transpose_cache(B);
     return BTA_pd_csc_alloc(B, sm_A->csc_cache);
 }
 
@@ -196,8 +198,10 @@ static void BTA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A
         return;
     }
 
-    /* A is sparse */
-    BTA_pd_csc_fill_values(B, sparse_csc_fresh(A), C);
+    /* A is sparse: read B^T from B's transpose cache, refreshed only when B's
+       values moved, instead of re-transposing B's block on every fill. */
+    const permuted_dense *BT = permuted_dense_transpose_fresh(B);
+    BA_pd_csc_fill_values(BT->X, B->m0, B->row_inv, sparse_csc_fresh(A), C);
 }
 
 static matrix *BTA_spd_matrices_alloc(const stacked_pd *B, matrix *A)
