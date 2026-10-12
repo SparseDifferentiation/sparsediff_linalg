@@ -44,11 +44,19 @@ matrix *BTA_matrices_alloc(matrix *A, matrix *B);
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C);
 
-/* Polymorphic dispatchers for C = B @ A. Today B must be permuted_dense
-   (asserted; a sparse B lands with the sparse-left product) and A is any kind;
-   the output C is permuted_dense. A sparse A is read through its CSC mirror,
-   which the fill refreshes itself. The fill bumps C's values_version and
-   asserts C has the kind the alloc produced. */
+/* Polymorphic dispatchers for C = B @ A, where B is permuted_dense or
+   sparse_matrix (a stacked_pd B asserts) and A is any kind.
+
+   Output type varies with the operand pair:
+     - B is PD                          -> output is permuted_dense.
+     - B is sparse_matrix, A is PD      -> output is permuted_dense.
+     - B is sparse_matrix, A is spd     -> output is stacked_pd.
+     - B is sparse_matrix, A is sparse  -> output is sparse_matrix.
+
+   A sparse B is read in place (its CSR is B^T in CSC form, so no transpose is
+   formed); a sparse A is read through its CSC mirror, which the fill refreshes
+   itself. The fill bumps C's values_version and asserts C has the kind the
+   alloc produced. */
 matrix *BA_matrices_alloc(const matrix *B, matrix *A);
 void BA_matrices_fill_values(const matrix *B, const matrix *A, matrix *C);
 
