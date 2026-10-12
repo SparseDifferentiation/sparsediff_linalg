@@ -2615,4 +2615,131 @@ const char *test_BTA_pd_csc_fill_no_transient_alloc(void)
 }
 #endif /* SP_TRACK_MEMORY */
 
+/* Dense row-major copy of a handle's current values, read through to_csr. */
+static double *s4_dense_of(matrix *M)
+{
+    CSR_matrix *csr = M->to_csr(M);
+    double *out = (double *) sp_calloc((size_t) M->m * M->n, sizeof(double));
+    for (int i = 0; i < csr->m; i++)
+    {
+        for (int jj = csr->p[i]; jj < csr->p[i + 1]; jj++)
+        {
+            out[i * csr->n + csr->i[jj]] += csr->x[jj];
+        }
+    }
+    return out;
+}
+
+/* Build the mixed-kind fixture: A sparse (6x5), B permuted_dense, D stacked_pd
+   (two blocks), E sparse with an empty pattern (the affine-child case). */
+static void s4_fixture(matrix **A, matrix **B, matrix **D, matrix **E)
+{
+    CSR_matrix *A_csr = new_CSR_matrix(6, 5, 7);
+    int Ap[7] = {0, 2, 3, 3, 5, 6, 7};
+    int Ai[7] = {0, 4, 2, 1, 3, 0, 4};
+    double Ax[7] = {1, 2, 3, 4, 5, 6, 7};
+    memcpy(A_csr->p, Ap, sizeof(Ap));
+    memcpy(A_csr->i, Ai, sizeof(Ai));
+    memcpy(A_csr->x, Ax, sizeof(Ax));
+    *A = new_sparse_matrix(A_csr);
+
+    int B_rp[2] = {1, 4};
+    int B_cp[3] = {0, 2, 4};
+    double BX[6] = {10, 20, 30, 40, 50, 60};
+    *B = new_permuted_dense(6, 5, 2, 3, B_rp, B_cp, BX);
+
+    int D0_rp[2] = {0, 2};
+    int D0_cp[2] = {1, 4};
+    double D0X[4] = {100, 200, 300, 400};
+    matrix *blk0 = new_permuted_dense(6, 5, 2, 2, D0_rp, D0_cp, D0X);
+    int D1_rp[1] = {5};
+    int D1_cp[3] = {0, 3, 4};
+    double D1X[3] = {500, 600, 700};
+    matrix *blk1 = new_permuted_dense(6, 5, 1, 3, D1_rp, D1_cp, D1X);
+    permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
+    *D = new_stacked_pd(6, 5, 2, blocks, NULL, NULL);
+
+    *E = new_sparse_matrix_alloc(6, 5, 0);
+    CSR_matrix *E_csr = (*E)->to_csr(*E);
+    memset(E_csr->p, 0, 7 * sizeof(int));
+}
+
+/* sum_4_matrices: mixed operand kinds (sparse, permuted_dense, stacked_pd read
+   block-major through its re-indexed map, and an empty sparse) against a
+   dense reference, before and after mutating an operand's values. */
+const char *test_sum_4_matrices_mixed_kinds(void)
+{
+    matrix *A, *B, *D, *E;
+    s4_fixture(&A, &B, &D, &E);
+
+    matrix *C = sum_4_matrices_alloc(A, B, D, E);
+    mu_assert("C is sparse", C->kind == MATRIX_SPARSE);
+    mu_assert("C shape", C->m == 6 && C->n == 5);
+    mu_assert("C pattern valid", csr_is_valid(C->to_csr(C)));
+
+    for (int round = 0; round < 2; round++)
+    {
+        if (round == 1)
+        {
+            /* mutate the stacked_pd's values (block-major buffer) and B's */
+            for (int ii = 0; ii < D->nnz; ii++) D->x[ii] = -D->x[ii];
+            matrix_values_changed(D);
+            for (int ii = 0; ii < B->nnz; ii++) B->x[ii] *= 0.5;
+            matrix_values_changed(B);
+        }
+        sum_4_matrices_fill_values(A, B, D, E, C);
+
+        double *ref = s4_dense_of(A);
+        double *dB = s4_dense_of(B);
+        double *dD = s4_dense_of(D);
+        double *dE = s4_dense_of(E);
+        double *got = s4_dense_of(C);
+        for (int k = 0; k < 30; k++) ref[k] += dB[k] + dD[k] + dE[k];
+        mu_assert("sum matches dense reference", cmp_double_array(got, ref, 30));
+        sp_free(ref);
+        sp_free(dB);
+        sp_free(dD);
+        sp_free(dE);
+        sp_free(got);
+    }
+
+    free_matrix(C);
+    free_matrix(E);
+    free_matrix(D);
+    free_matrix(B);
+    free_matrix(A);
+    return 0;
+}
+
+#ifdef SP_TRACK_MEMORY
+typedef struct
+{
+    matrix *A, *B, *D, *E, *C;
+} s4_fill_args;
+
+static void run_sum_4_matrices(const void *ctx)
+{
+    const s4_fill_args *a = (const s4_fill_args *) ctx;
+    sum_4_matrices_fill_values(a->A, a->B, a->D, a->E, a->C);
+}
+
+/* The maps are bound at alloc time, so the fill stays allocation-free. */
+const char *test_sum_4_matrices_fill_no_transient_alloc(void)
+{
+    matrix *A, *B, *D, *E;
+    s4_fixture(&A, &B, &D, &E);
+    matrix *C = sum_4_matrices_alloc(A, B, D, E);
+    s4_fill_args args = {A, B, D, E, C};
+    run_sum_4_matrices(&args); /* warm-up */
+    mu_assert("sum_4_matrices fill allocates",
+              fill_is_alloc_free(run_sum_4_matrices, &args));
+    free_matrix(C);
+    free_matrix(E);
+    free_matrix(D);
+    free_matrix(B);
+    free_matrix(A);
+    return 0;
+}
+#endif /* SP_TRACK_MEMORY */
+
 #endif /* TEST_MATMUL_DISPATCHERS_H */
