@@ -12,6 +12,7 @@
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matmul.h"
+#include "sparsediff_linalg/matrix_sum.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include "test_helpers.h"
 #include <stdlib.h>

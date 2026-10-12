@@ -20,10 +20,9 @@
 
 #include "sparsediff_linalg/matrix.h"
 
-/* Two-operand operations on matrix handles: products through the kind
-   dispatchers and polymorphic sums. All are two-phase: *_alloc builds the
-   output (returned, or filled into a caller-provided handle for the sums),
-   *_fill_values writes its values and bumps its values_version. */
+/* Products of matrix handles through the kind dispatchers. All are two-phase:
+   *_alloc builds and returns the output, *_fill_values writes its values and
+   bumps its values_version. */
 
 /* Polymorphic dispatchers for C = BT @ A and C = BT @ diag(d) @ A, where A
    and B are any matrix type (permuted_dense, stacked_pd, or sparse_matrix).
@@ -77,27 +76,5 @@ void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
 matrix *BA_dense_kron_I_matrices_alloc(const matrix *A, int m, matrix *J);
 void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *J,
                                           matrix *C);
-
-/* Polymorphic wrappers for allocating C = A + B. Right now we always
-   convert to CSR matrices internally for the sum. */
-void sum_matrices_alloc(matrix *A, matrix *B, matrix *C);
-
-/* Fill values of C = A + B. Uses CSR matrices internally. */
-void sum_matrices_fill_values(matrix *A, matrix *B, matrix *C);
-
-/* Fill values of C = diag(d1) * A + diag(d2) * B. Uses CSR matrices internally. */
-void sum_scaled_matrices_fill_values(matrix *A, matrix *B, matrix *C,
-                                     const double *d1, const double *d2);
-
-/* C = A + B + D + E for handles of any kind. The alloc merges the four patterns
-   (read through to_csr) into a new sparse handle and binds, inside it, one index
-   map per operand from the operand's native value order (op->x: CSR order for
-   sparse, the dense block for permuted_dense, block-major for stacked_pd) to
-   positions in C->x. The fill zeroes C, accumulates the four operands' op->x
-   through those maps and bumps C; it never calls to_csr and never allocates.
-   Operand kinds and patterns must not change between alloc and fill. */
-matrix *sum_4_matrices_alloc(matrix *A, matrix *B, matrix *D, matrix *E);
-void sum_4_matrices_fill_values(const matrix *A, const matrix *B, const matrix *D,
-                                const matrix *E, matrix *C);
 
 #endif /* MATMUL_H */
