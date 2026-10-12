@@ -54,7 +54,4 @@ CSR_matrix *transpose(const CSR_matrix *A, int *iwork);
 CSR_matrix *AT_alloc(const CSR_matrix *A, int *iwork);
 void AT_fill_values(const CSR_matrix *A, CSR_matrix *AT, int *iwork);
 
-/* computes dense y = Ax */
-void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset);
-
 #endif /* CSR_matrix_H */

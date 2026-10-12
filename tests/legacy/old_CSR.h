@@ -53,4 +53,7 @@ int count_nonzero_cols(const CSR_matrix *A, bool *col_nz);
 /* inserts 'idx' into array 'arr' in sorted order, and moves the other elements */
 void insert_idx(int idx, int *arr, int len);
 
+/* computes dense y = Ax */
+void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset);
+
 #endif /* OLD_CSR_H */

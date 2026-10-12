@@ -201,3 +201,16 @@ void insert_idx(int idx, int *arr, int len)
     memmove(arr + (j + 1), arr + j, (len - j) * sizeof(int));
     arr[j] = idx;
 }
+
+void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset)
+{
+    for (int row = 0; row < A->m; row++)
+    {
+        double sum = 0.0;
+        for (int j = A->p[row]; j < A->p[row + 1]; j++)
+        {
+            sum += A->x[j] * x[A->i[j] - col_offset];
+        }
+        y[row] = sum;
+    }
+}
