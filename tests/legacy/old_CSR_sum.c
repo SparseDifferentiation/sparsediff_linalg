@@ -526,3 +526,72 @@ void sum_evenly_spaced_rows_csr_alloc(const CSR_matrix *A, CSR_matrix *C,
 
     C->nnz = cursor;
 }
+
+void accumulator_with_spacing(const CSR_matrix *A, const int *idx_map, double *out,
+                              int spacing)
+{
+    /* don't forget to initialze accumulator to 0 before calling this */
+    for (int row = 0; row < A->m; row += spacing)
+    {
+        for (int j = A->p[row]; j < A->p[row + 1]; j++)
+        {
+            out[idx_map[j]] += A->x[j];
+        }
+    }
+}
+
+/*
+ * Sums evenly spaced rows from A into a single row in C and fills an index map.
+ * A: input CSR_matrix matrix
+ * C: output CSR_matrix matrix (must have m=1)
+ * spacing: row spacing
+ * iwork: workspace of size at least max(A->n, A->nnz)
+ * idx_map: output index map, size at least A->nnz
+ */
+void sum_spaced_rows_into_row_csr_alloc(const CSR_matrix *A, CSR_matrix *C,
+                                        int spacing, int *iwork, int *idx_map)
+{
+    assert(C->m == 1);
+    C->n = A->n;
+
+    /* gather all column indices from the spaced rows */
+    int count = 0;
+    for (int row = 0; row < A->m; row += spacing)
+    {
+        int len = A->p[row + 1] - A->p[row];
+        memcpy(iwork + count, A->i + A->p[row], len * sizeof(int));
+        count += len;
+    }
+
+    /* fill sparsity pattern */
+    sort_int_array(iwork, count);
+    int unique_nnz = 0;
+    int prev_col = -1;
+    for (int i = 0; i < count; i++)
+    {
+        int col = iwork[i];
+        if (col != prev_col)
+        {
+            C->i[unique_nnz++] = col;
+            prev_col = col;
+        }
+    }
+    C->nnz = unique_nnz;
+    C->p[0] = 0;
+    C->p[1] = C->nnz;
+
+    /* fill idx_map */
+    int *col_to_pos = iwork;
+    for (int idx = 0; idx < unique_nnz; idx++)
+    {
+        col_to_pos[C->i[idx]] = idx;
+    }
+
+    for (int row = 0; row < A->m; row += spacing)
+    {
+        for (int j = A->p[row]; j < A->p[row + 1]; j++)
+        {
+            idx_map[j] = col_to_pos[A->i[j]];
+        }
+    }
+}

@@ -1,0 +1,38 @@
+/*
+ * Copyright 2026 Daniel Cederberg and William Zhang
+ *
+ * This file is part of the SparseDiffEngine project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#ifndef OLD_CSC_H
+#define OLD_CSC_H
+
+/* LEGACY: kept only as a test oracle for the library's own kernels. Compiled
+   into sparsediff_linalg_tests, never into the library. Not part of the API.
+   These three were the engine's quad_form / quad_over_lin helpers, retired by
+   the matrix dispatchers (Q J_f as B^T A with Q the transposed operand). */
+
+#include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
+
+/* Fill sparsity of C = BA, where B is symmetric. */
+CSC_matrix *symBA_alloc(const CSR_matrix *B, const CSC_matrix *A);
+
+/* Fill values of C = BA. The matrix B does not have to be symmetric */
+void BA_fill_values(const CSR_matrix *B, const CSC_matrix *A, CSC_matrix *C);
+
+/* Count nonzero columns of a CSC_matrix matrix */
+int count_nonzero_cols_csc(const CSC_matrix *A);
+
+#endif /* OLD_CSC_H */
