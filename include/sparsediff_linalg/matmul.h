@@ -71,6 +71,13 @@ matrix *BA_dense_kron_matrices_alloc(const matrix *A, int p, matrix *J);
 void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
                                         matrix *C);
 
+/* The mirror image: C = kron(A, I_m) @ J, same contract on A, J any kind, C
+   always stacked_pd with one block per i < m holding output rows i + m*c. No
+   Kronecker product is formed. */
+matrix *BA_dense_kron_I_matrices_alloc(const matrix *A, int m, matrix *J);
+void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *J,
+                                          matrix *C);
+
 /* Polymorphic wrappers for allocating C = A + B. Right now we always
    convert to CSR matrices internally for the sum. */
 void sum_matrices_alloc(matrix *A, matrix *B, matrix *C);

@@ -23,33 +23,40 @@
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/matrix.h"
 
-/* All three families compute C = kron(I_p, A) @ J as a stacked_pd, without
-   materializing kron(I_p, A).
+/* All three families compute C = kron(I_p, A) @ J or C = kron(A, I_p) @ J as a
+   stacked_pd, without materializing the Kronecker product. The layout picks
+   which: under KRON_I_A block k holds output rows k*m0 .. and reads J's rows
+   k*n0 ..; under KRON_A_I block i holds output rows i + p*r and reads J's rows
+   i + p*c, so every row of a block shares one pattern.
 
    Contract on A: A must be a "full" permuted_dense — m0 == base.m,
    n0 == base.n, and row_perm / col_perm are the identity — i.e., a
    local dense matrix wrapped in the permuted_dense struct. */
+typedef enum
+{
+    KRON_I_A, /* kron(I_p, A) */
+    KRON_A_I  /* kron(A, I_p) */
+} kron_layout;
 
-/* Allocate sparsity for stacked_pd C = kron(I_p, A) @ J where J is CSC. */
-matrix *BA_dense_kron_csc_alloc(const permuted_dense *A, int p, const CSC_matrix *J);
-
-/* Fill values of stacked_pd C = kron(I_p, A) @ J where J is CSC. */
+/* J is CSC. */
+matrix *BA_dense_kron_csc_alloc(const permuted_dense *A, int p, const CSC_matrix *J,
+                                kron_layout layout);
 void BA_dense_kron_csc_fill_values(const permuted_dense *A, int p,
-                                   const CSC_matrix *J, stacked_pd *C);
+                                   const CSC_matrix *J, stacked_pd *C,
+                                   kron_layout layout);
 
-/* Allocate sparsity for stacked_pd C = kron(I_p, A) @ J where J is PD. */
+/* J is permuted_dense. */
 matrix *BA_dense_kron_pd_alloc(const permuted_dense *A, int p,
-                               const permuted_dense *J);
-
-/* Fill values of stacked_pd C = kron(I_p, A) @ J where J is permuted_dense. */
+                               const permuted_dense *J, kron_layout layout);
 void BA_dense_kron_pd_fill_values(const permuted_dense *A, int p,
-                                  const permuted_dense *J, stacked_pd *C);
+                                  const permuted_dense *J, stacked_pd *C,
+                                  kron_layout layout);
 
-/* Allocate sparsity for stacked_pd C = kron(I_p, A) @ J where J is stacked_pd. */
-matrix *BA_dense_kron_spd_alloc(const permuted_dense *A, int p, const stacked_pd *J);
-
-/* Fill values of stacked_pd C = kron(I_p, A) @ J where J is stacked_pd. */
+/* J is stacked_pd. */
+matrix *BA_dense_kron_spd_alloc(const permuted_dense *A, int p, const stacked_pd *J,
+                                kron_layout layout);
 void BA_dense_kron_spd_fill_values(const permuted_dense *A, int p,
-                                   const stacked_pd *J, stacked_pd *C);
+                                   const stacked_pd *J, stacked_pd *C,
+                                   kron_layout layout);
 
 #endif /* STACKED_PD_KRON_LINALG_H */
