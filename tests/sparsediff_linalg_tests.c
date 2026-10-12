@@ -220,6 +220,8 @@ int main(void)
     mu_run_test(test_YT_kron_I_larger, tests_run);
     mu_run_test(test_I_kron_X, tests_run);
     mu_run_test(test_I_kron_X_larger, tests_run);
+    mu_run_test(test_BA_dense_kron_I_matches_legacy_YT_kron_I, tests_run);
+    mu_run_test(test_BA_dense_kron_matches_legacy_I_kron_X, tests_run);
 
     mu_run_test(test_fills_refresh_sparse_operands_BTA, tests_run);
     mu_run_test(test_fills_refresh_sparse_operands_BTDA, tests_run);

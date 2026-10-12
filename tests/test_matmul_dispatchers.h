@@ -3025,6 +3025,9 @@ const char *test_BA_dense_kron_I_sparse_J(void)
     matrix *A = kron_I_A();
     matrix *J = kron_I_J_sparse();
     matrix *C = BA_dense_kron_I_matrices_alloc(A, 2, J);
+    /* Structure, which a dense reference cannot see: block 0 reads J rows
+       {0, 2, 4} (columns {1}), block 1 rows {1, 3, 5} (columns {0, 2, 3, 4}). */
+    mu_assert("kron_I sparse pattern is tight", C->nnz == 2 * 1 + 2 * 4);
     BA_dense_kron_I_matrices_fill_values(A, 2, J, C);
     const char *err = kron_I_matches_dense(A, 2, J, C, "kron_I sparse first fill");
     mu_assert(err ? err : "", err == 0);

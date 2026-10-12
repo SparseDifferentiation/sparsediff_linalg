@@ -29,17 +29,12 @@
 //
 //   1. At alloc, build a persistent permuted_dense "state" (the scratch view of
 //      kron(I_p, A), or its transpose BT for the spd kernel).
-//   2. Loop k = 0..p-1: kron_scratch_set_block(state, k, last_k); call the
-//      per-kernel alloc op to produce Ck; collect non-empty Ck's.
+//   2. Loop k = 0..p-1: set_block(state, k, p); call the per-kernel alloc op
+//      to produce Ck; collect non-empty Ck's.
 //   3. Assemble the survivors into a stacked_pd C and stash `state` on
 //      C->kernel_pd_scratch so fill can reuse it.
 //   4. At fill, read state from C->kernel_pd_scratch (plus any kernel-specific
 //      value refresh) and run the per-output-block loop.
-//
-// Each loop ends with one extra set_block(state, 0, last_k, p) call
-// to restore "block 0 set" so the next entry's last_k = 0 invariant holds.
-// (Only the csc kernel actually reads state->col_inv; the reset is harmless
-// for the pd / spd kernels and keeps the helper agnostic.)
 //
 // The state for pd/csc is the scratch (kron_scratch_init); for spd it is the
 // transposed scratch BT (kron_BT_alloc). One set_block function works for
@@ -92,23 +87,29 @@ static permuted_dense *kron_BT_alloc(const permuted_dense *A, int p)
     return (permuted_dense *) BT_m;
 }
 
-/* Mutate the state to represent kron block k of kron(I_p, A). last_k is the
-   block currently encoded (0 immediately after _init); the call clears last_k's
-   col_inv entries and sets block-k's, plus refreshes row_perm and col_perm.
-   O(m + n) work. row_inv is left stale — no per-block kernel reads it. Works on
-   both scratch (pd/csc) and BT (spd) under the "full A" contract. */
-static void kron_set_block_I_A(permuted_dense *state, int k, int last_k, int p)
+/* Clear the col_inv entries of the block the state currently encodes (block 0
+   of kron(I_p, A) right after _init, whatever the layout). */
+static void kron_clear_col_inv(permuted_dense *state)
+{
+    for (int c = 0; c < state->n0; c++)
+    {
+        state->col_inv[state->col_perm[c]] = -1;
+    }
+}
+
+/* Mutate the state to represent kron block k of kron(I_p, A): refresh row_perm,
+   col_perm and col_inv. O(m + n) work. row_inv is left stale — no per-block
+   kernel reads it. Works on both scratch (pd/csc) and BT (spd) under the "full
+   A" contract. */
+static void kron_set_block_I_A(permuted_dense *state, int k, int p)
 {
     (void) p;
     int m = state->m0;
     int n = state->n0;
+    kron_clear_col_inv(state);
     for (int i = 0; i < m; i++)
     {
         state->row_perm[i] = k * m + i;
-    }
-    for (int j = 0; j < n; j++)
-    {
-        state->col_inv[last_k * n + j] = -1;
     }
     for (int j = 0; j < n; j++)
     {
@@ -118,17 +119,14 @@ static void kron_set_block_I_A(permuted_dense *state, int k, int last_k, int p)
 }
 
 /* Same for block i of kron(A, I_p): rows i + p*r and columns i + p*c. */
-static void kron_set_block_A_I(permuted_dense *state, int i, int last_i, int p)
+static void kron_set_block_A_I(permuted_dense *state, int i, int p)
 {
     int m = state->m0;
     int n = state->n0;
+    kron_clear_col_inv(state);
     for (int r = 0; r < m; r++)
     {
         state->row_perm[r] = i + p * r;
-    }
-    for (int c = 0; c < n; c++)
-    {
-        state->col_inv[last_i + p * c] = -1;
     }
     for (int c = 0; c < n; c++)
     {
@@ -137,7 +135,7 @@ static void kron_set_block_A_I(permuted_dense *state, int i, int last_i, int p)
     }
 }
 
-typedef void (*kron_set_block_fn)(permuted_dense *state, int k, int last_k, int p);
+typedef void (*kron_set_block_fn)(permuted_dense *state, int k, int p);
 
 static kron_set_block_fn kron_set_block_for(kron_layout layout)
 {
@@ -152,8 +150,7 @@ typedef void (*kron_block_fill_fn)(permuted_dense *state, const void *ctx,
 /* Generic alloc loop: iterate the p kron-blocks of A on `state`, call `op` per
    block, drop blocks whose Ck has nnz == 0, assemble the survivors into a
    stacked_pd of shape (Cm, Cn). Ownership of `state` transfers to
-   C->kernel_pd_scratch on return. Restores state to "block 0 set" at the
-   end for the next call's invariant. */
+   C->kernel_pd_scratch on return. */
 static matrix *kron_alloc_blockwise(permuted_dense *state, int p, kron_layout layout,
                                     int Cm, int Cn, kron_block_alloc_fn op,
                                     const void *ctx)
@@ -170,11 +167,9 @@ static matrix *kron_alloc_blockwise(permuted_dense *state, int p, kron_layout la
     int *C_src = (int *) sp_malloc(p * sizeof(int));
 
     int out_nb = 0;
-    int last_k = 0;
     for (int k = 0; k < p; k++)
     {
-        set_block(state, k, last_k, p);
-        last_k = k;
+        set_block(state, k, p);
 
         matrix *Ck = op(state, ctx);
         if (Ck->nnz == 0)
@@ -197,9 +192,6 @@ static matrix *kron_alloc_blockwise(permuted_dense *state, int p, kron_layout la
     sp_free(C_src);
     sp_free(C_src_p);
 
-    /* Restore "block 0 set" invariant for the next call. */
-    set_block(state, 0, last_k, p);
-
     /* Hand state to C for reuse at fill time. stacked_pd_free releases it. */
     ((stacked_pd *) C)->kernel_pd_scratch = state;
     return C;
@@ -215,18 +207,12 @@ static void kron_fill_blockwise(stacked_pd *C, int p, kron_layout layout,
     kron_set_block_fn set_block = kron_set_block_for(layout);
 
     permuted_dense *state = C->kernel_pd_scratch;
-    int last_k = 0;
     for (int k = 0; k < C->n_blocks; k++)
     {
         int q = C->src_block_idx[C->src_block_idx_p[k]];
-        set_block(state, q, last_k, p);
-        last_k = q;
-
+        set_block(state, q, p);
         op(state, ctx, C->blocks[k]);
     }
-
-    /* Restore "block 0 set" invariant for the next fill call. */
-    set_block(state, 0, last_k, p);
 }
 
 // ----------------------------------------------------------------------------------
