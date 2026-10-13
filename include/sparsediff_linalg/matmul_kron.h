@@ -30,38 +30,27 @@
    needs a scatter-style CSR kernel. Not provided yet. */
 void BA_kron_vec_matrices(const matrix *A, const double *x, double *y, int p);
 
-/* Polymorphic dispatchers for C = kron(I_p, A) @ J, where A is a local dense
-   matrix and J is any kind. The output C is always stacked_pd.
+/* C = kron(A, I_m) @ J, where A is a local dense matrix and J is any kind. C is
+   always stacked_pd, with one block per i < m holding output rows i + m*c. No
+   Kronecker product is formed.
 
    Contract (asserted): A must be a "full" permuted_dense, i.e. of kind
    MATRIX_PERMUTED_DENSE with its dense block covering the whole (m, n) shape
    (as built by new_permuted_dense_full). A sparse J is read through its CSC
    mirror, which the fill refreshes itself. The fill bumps C's values_version. */
-matrix *BA_dense_kron_matrices_alloc(const matrix *A, int p, matrix *J);
-void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
-                                        matrix *C);
-
-/* The mirror image: C = kron(A, I_m) @ J, same contract on A, J any kind, C
-   always stacked_pd with one block per i < m holding output rows i + m*c. No
-   Kronecker product is formed. */
 matrix *BA_dense_kron_I_matrices_alloc(const matrix *A, int m, matrix *J);
 void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *J,
                                           matrix *C);
 
-/* The sparse sibling of BA_dense_kron_matrices_*: C = kron(I_p, A) @ J for a
-   sparse_matrix A and J of any kind with J->m == p * A->n. C is a
-   sparse_matrix. J is converted to CSC through its CSR view (which the fill
-   may refresh) into a buffer bound to C. The fill bumps C's values_version. */
-matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J);
-void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
-                                         matrix *C);
-
-/* Dispatcher for C = kron(I_p, A) @ J, where A is a full permuted_dense or a
-   sparse_matrix (stacked_pd asserts) and J is any kind:
-     - p == 1         -> BA_matrices_* (output kind as documented there).
-     - A is full PD   -> BA_dense_kron_matrices_* (output is stacked_pd).
-     - A is sparse    -> BA_sparse_kron_matrices_* (output is sparse_matrix).
-   The fill bumps C's values_version. */
+/* C = kron(I_p, A) @ J, where A is a full permuted_dense (as built by
+   new_permuted_dense_full) or a sparse_matrix (stacked_pd asserts), and J is any
+   kind with J->m == p * A->n. The output kind depends on the case:
+     - p == 1         -> as BA_matrices_* (matmul.h).
+     - A is full PD   -> stacked_pd.
+     - A is sparse    -> sparse_matrix.
+   A sparse J is read through its CSC mirror (full PD A) or converted to CSC
+   through its CSR view (sparse A); the fill refreshes either. The fill bumps
+   C's values_version. */
 matrix *BA_kron_matrices_alloc(const matrix *A, int p, matrix *J);
 void BA_kron_matrices_fill_values(const matrix *A, int p, matrix *J, matrix *C);
 
