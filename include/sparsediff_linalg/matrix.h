@@ -42,10 +42,6 @@ typedef enum
     MATRIX_STACKED_PD      /* stacked_pd: vertical stack of permuted_dense blocks */
 } matrix_kind;
 
-/* y = kron(I_p, A) @ x */
-typedef void (*matrix_block_left_mult_vec_fn)(const matrix *A, const double *x,
-                                              double *y, int p);
-
 /* Allocate sparsity of C = kron(I_p, A) @ J */
 typedef CSC_matrix *(*matrix_block_left_mult_sparsity_fn)(const matrix *A,
                                                           const CSC_matrix *J,
@@ -105,7 +101,6 @@ struct matrix
     uint64_t values_version;
 
     /* Operator ops */
-    matrix_block_left_mult_vec_fn block_left_mult_vec;
     matrix_block_left_mult_sparsity_fn block_left_mult_sparsity;
     matrix_block_left_mult_values_fn block_left_mult_values;
 

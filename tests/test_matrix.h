@@ -2,12 +2,13 @@
 #define TEST_MATRIX_H
 
 #include "minunit.h"
+#include "sparsediff_linalg/matmul.h"
 #include "sparsediff_linalg/matrix.h"
 #include "test_helpers.h"
 #include <stdlib.h>
 #include <string.h>
 
-/* Test full-block PD block_left_mult_vec against known result.
+/* Test full-block PD BA_kron_vec_matrices against known result.
    A = [1 2; 3 4] (2x2), x = [1; 2], p = 1
    y = A * x = [1*1+2*2; 3*1+4*2] = [5; 11] */
 const char *test_pd_mult_vec_basic(void)
@@ -18,7 +19,7 @@ const char *test_pd_mult_vec_basic(void)
     double x[] = {1.0, 2.0};
     double y[2] = {0.0, 0.0};
 
-    A->block_left_mult_vec(A, x, y, 1);
+    BA_kron_vec_matrices(A, x, y, 1);
 
     double y_expected[2] = {5.0, 11.0};
     mu_assert("y incorrect", cmp_double_array(y, y_expected, 2));
@@ -27,7 +28,7 @@ const char *test_pd_mult_vec_basic(void)
     return 0;
 }
 
-/* Test full-block PD block_left_mult_vec with multiple blocks.
+/* Test full-block PD BA_kron_vec_matrices with multiple blocks.
    A = [1 2; 3 4] (2x2), x = [1; 2; 3; 4], p = 2
    y = [A*[1;2]; A*[3;4]] = [5; 11; 11; 25] */
 const char *test_pd_mult_vec_blocks(void)
@@ -38,7 +39,7 @@ const char *test_pd_mult_vec_blocks(void)
     double x[] = {1.0, 2.0, 3.0, 4.0};
     double y[4] = {0};
 
-    A->block_left_mult_vec(A, x, y, 2);
+    BA_kron_vec_matrices(A, x, y, 2);
 
     double y_expected[4] = {5.0, 11.0, 11.0, 25.0};
     mu_assert("y incorrect", cmp_double_array(y, y_expected, 4));
@@ -47,7 +48,7 @@ const char *test_pd_mult_vec_blocks(void)
     return 0;
 }
 
-/* Compare sparse vs PD block_left_mult_vec for a non-square matrix.
+/* Compare sparse vs PD BA_kron_vec_matrices for a non-square matrix.
    A = [1 2 3; 4 5 6] (2x3), x = [1; 2; 3], p = 1 */
 const char *test_sparse_vs_pd_mult_vec(void)
 {
@@ -69,8 +70,8 @@ const char *test_sparse_vs_pd_mult_vec(void)
     double y_sparse[2] = {0};
     double y_pd[2] = {0};
 
-    sparse->block_left_mult_vec(sparse, x, y_sparse, 1);
-    pd->block_left_mult_vec(pd, x, y_pd, 1);
+    BA_kron_vec_matrices(sparse, x, y_sparse, 1);
+    BA_kron_vec_matrices(pd, x, y_pd, 1);
 
     mu_assert("sparse vs pd mismatch", cmp_double_array(y_sparse, y_pd, 2));
 
@@ -99,7 +100,7 @@ const char *test_pd_trans_full_block(void)
     return 0;
 }
 
-/* Compare sparse vs PD block_left_mult_vec with p=2 blocks.
+/* Compare sparse vs PD BA_kron_vec_matrices with p=2 blocks.
    A = [1 2; 3 4], x = [1; 2; 3; 4], p = 2 */
 const char *test_sparse_vs_pd_mult_vec_blocks(void)
 {
@@ -120,8 +121,8 @@ const char *test_sparse_vs_pd_mult_vec_blocks(void)
     double y_sparse[4] = {0};
     double y_pd[4] = {0};
 
-    sparse->block_left_mult_vec(sparse, x, y_sparse, 2);
-    pd->block_left_mult_vec(pd, x, y_pd, 2);
+    BA_kron_vec_matrices(sparse, x, y_sparse, 2);
+    BA_kron_vec_matrices(pd, x, y_pd, 2);
 
     mu_assert("sparse vs pd blocks mismatch", cmp_double_array(y_sparse, y_pd, 4));
 
@@ -132,7 +133,7 @@ const char *test_sparse_vs_pd_mult_vec_blocks(void)
 
 /* Full-block permuted_dense acting as operator: smoke test mirroring
    test_pd_mult_vec_basic with an explicit row_perm/col_perm. */
-const char *test_pd_operator_block_left_mult_vec(void)
+const char *test_pd_operator_BA_kron_vec(void)
 {
     double data[] = {1.0, 2.0, 3.0, 4.0};
     int row_perm[2] = {0, 1};
@@ -142,7 +143,7 @@ const char *test_pd_operator_block_left_mult_vec(void)
     double x[] = {1.0, 2.0};
     double y[2] = {0.0, 0.0};
 
-    A->block_left_mult_vec(A, x, y, 1);
+    BA_kron_vec_matrices(A, x, y, 1);
 
     double y_expected[2] = {5.0, 11.0};
     mu_assert("y incorrect", cmp_double_array(y, y_expected, 2));

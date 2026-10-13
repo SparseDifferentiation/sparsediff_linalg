@@ -224,6 +224,18 @@ void BA_matrices_fill_values(const matrix *B_m, const matrix *A, matrix *C_m)
     matrix_values_changed(C_m);
 }
 
+void BA_kron_vec_matrices(const matrix *A, const double *x, double *y, int p)
+{
+    assert(A->kind != MATRIX_STACKED_PD);
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        BA_kron_vec_pd((const permuted_dense *) A, x, y, p);
+        return;
+    }
+    /* A is sparse_matrix */
+    block_left_multiply_vec(((const sparse_matrix *) A)->csr, x, y, p);
+}
+
 static matrix *BTA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
 {
     if (A->kind == MATRIX_PERMUTED_DENSE)

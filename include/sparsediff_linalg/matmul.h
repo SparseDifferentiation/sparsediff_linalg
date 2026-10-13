@@ -64,6 +64,16 @@ void ATDA_matrices_fill_values(const matrix *A, const double *d, matrix *C);
 matrix *BA_matrices_alloc(const matrix *B, matrix *A);
 void BA_matrices_fill_values(const matrix *B, const matrix *A, matrix *C);
 
+/* y = kron(I_p, A) @ x: x is p blocks of length A->n and y is p blocks of
+   length A->m, i.e. y = [A x_1; ...; A x_p]. A is a sparse_matrix or a full
+   permuted_dense (dense block covering the whole shape); stacked_pd asserts.
+
+   Possible extension: a transposed variant y = kron(I_p, A^T) @ x would let
+   callers drop a stored transpose of A that they keep only for this product.
+   For a full permuted_dense it is the other dgemm transpose flag; a sparse A
+   needs a scatter-style CSR kernel. Not provided yet. */
+void BA_kron_vec_matrices(const matrix *A, const double *x, double *y, int p);
+
 /* Polymorphic dispatchers for C = kron(I_p, A) @ J, where A is a local dense
    matrix and J is any kind. The output C is always stacked_pd.
 

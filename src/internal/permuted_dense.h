@@ -100,6 +100,9 @@ void pd_blocks_csr_fill_values(permuted_dense *const *blocks, int n_blocks,
    blocks carry no values_version of their own, so unlike the vtable fills
    these fills do NOT bump C's values_version; the caller owning C does. */
 
+/* y = kron(I_p, A) @ x for a full-block A (m0 == m, n0 == n): one dgemm. */
+void BA_kron_vec_pd(const permuted_dense *A, const double *x, double *y, int p);
+
 /* Allocate C = A[map, :], where A and C are permuted dense. C stores map
    internally, so the fill takes none. */
 matrix *row_gather_pd_alloc(const permuted_dense *A, const int *map, int m_out);
