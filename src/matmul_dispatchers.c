@@ -567,6 +567,45 @@ void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C)
     matrix_values_changed(C);
 }
 
+matrix *transpose_matrices_alloc(const matrix *A)
+{
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        return transpose_pd_alloc((const permuted_dense *) A);
+    }
+    if (A->kind == MATRIX_STACKED_PD)
+    {
+        return transpose_spd_alloc((const stacked_pd *) A);
+    }
+    /* A is sparse_matrix; the fill's AT_fill_values workspace is bound to AT */
+    const CSR_matrix *csr = ((const sparse_matrix *) A)->csr;
+    int *iwork = (int *) sp_malloc((size_t) csr->n * sizeof(int));
+    sparse_matrix *AT = (sparse_matrix *) new_sparse_matrix(AT_alloc(csr, iwork));
+    AT->bound_iwork = iwork;
+    return &AT->base;
+}
+
+void transpose_matrices_fill_values(const matrix *A, matrix *AT)
+{
+    assert(AT->kind == A->kind);
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        transpose_pd_fill_values((const permuted_dense *) A, (permuted_dense *) AT);
+    }
+    else if (A->kind == MATRIX_STACKED_PD)
+    {
+        transpose_spd_fill_values((const stacked_pd *) A, (stacked_pd *) AT);
+    }
+    else
+    {
+        /* A is sparse_matrix */
+        sparse_matrix *sm_AT = (sparse_matrix *) AT;
+        AT_fill_values(((const sparse_matrix *) A)->csr, sm_AT->csr,
+                       sm_AT->bound_iwork);
+    }
+    matrix_values_changed(AT);
+}
+
 matrix *ATA_matrices_alloc(matrix *A)
 {
     if (A->kind == MATRIX_PERMUTED_DENSE)

@@ -36,9 +36,9 @@ typedef struct sparse_matrix
     uint64_t csc_seen; /* base.values_version the csc_cache values reflect */
     int *csc_iwork;
     /* Int state bound by the alloc that produced this matrix and read by the
-       matching fill: transpose_alloc stores csr->n scratch for
-       transpose_fill_values; row_gather_alloc stores the base.m-long row map
-       for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
+       matching fill: transpose_matrices_alloc stores csr->n scratch for
+       transpose_matrices_fill_values; row_gather_alloc stores the base.m-long row
+       map for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
        position map for row_reduce_fill_values; BA_sparse_kron_matrices_alloc
        stores the base.m-long csc_to_csr workspace. NULL otherwise; never
        touched by any other kernel. */

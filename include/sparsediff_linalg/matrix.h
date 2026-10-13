@@ -42,12 +42,6 @@ typedef enum
     MATRIX_STACKED_PD      /* stacked_pd: vertical stack of permuted_dense blocks */
 } matrix_kind;
 
-/* Allocate AT = transpose(A) */
-typedef matrix *(*matrix_transpose_alloc_fn)(const matrix *A);
-
-/* Fill values of AT = transpose(A) */
-typedef void (*matrix_transpose_fill_values_fn)(const matrix *A, matrix *AT);
-
 /* Returns a CSR_matrix view of A */
 typedef CSR_matrix *(*matrix_to_csr_fn)(matrix *A);
 
@@ -91,10 +85,6 @@ struct matrix
        version of their own. */
     uint64_t values_version;
 
-    /* Chain-rule ops */
-    matrix_transpose_alloc_fn transpose_alloc;
-    matrix_transpose_fill_values_fn transpose_fill_values;
-
     /* Views */
     matrix_to_csr_fn to_csr;
 
@@ -132,6 +122,13 @@ matrix *copy_sparsity_matrices_alloc(const matrix *A);
 /* Fill values of C = diag(d) @ A, where len(d) = A->m. C must have been
    allocated by copy_sparsity_matrices_alloc(A). Bumps C's values_version. */
 void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C);
+
+/* Allocate AT = transpose(A), of A's kind. Values are uninitialized. */
+matrix *transpose_matrices_alloc(const matrix *A);
+
+/* Fill values of AT = transpose(A); AT must come from
+   transpose_matrices_alloc(A). Bumps AT's values_version. */
+void transpose_matrices_fill_values(const matrix *A, matrix *AT);
 
 /* ---- Constructors of the three kinds. Each returns a matrix handle; the kinds'
    layouts are private. ---- */

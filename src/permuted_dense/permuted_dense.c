@@ -69,18 +69,6 @@ static CSR_matrix *permuted_dense_to_csr(matrix *self)
     return pd->csr_cache;
 }
 
-static matrix *permuted_dense_vtable_transpose_alloc(const matrix *self)
-{
-    return transpose_pd_alloc((const permuted_dense *) self);
-}
-
-static void permuted_dense_vtable_transpose_fill_values(const matrix *self,
-                                                        matrix *out)
-{
-    transpose_pd_fill_values((const permuted_dense *) self, (permuted_dense *) out);
-    matrix_values_changed(out);
-}
-
 matrix *row_gather_pd_alloc(const permuted_dense *A, const int *map, int m_out)
 {
     /* Output position i is dense iff map[i] hits a row in A->row_perm. The kept
@@ -280,8 +268,6 @@ static void wire_vtable(permuted_dense *pd)
     pd->base.kind = MATRIX_PERMUTED_DENSE;
     pd->base.free_fn = permuted_dense_free;
     pd->base.to_csr = permuted_dense_to_csr;
-    pd->base.transpose_alloc = permuted_dense_vtable_transpose_alloc;
-    pd->base.transpose_fill_values = permuted_dense_vtable_transpose_fill_values;
     pd->base.row_gather_alloc = permuted_dense_vtable_row_gather_alloc;
     pd->base.row_gather_fill_values = permuted_dense_vtable_row_gather_fill_values;
     pd->base.diag_vec_alloc = permuted_dense_vtable_diag_vec_alloc;

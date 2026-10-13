@@ -85,8 +85,8 @@ const char *test_pd_trans_full_block(void)
 {
     double data[] = {1, 2, 3, 4, 5, 6}; /* 2x3 */
     matrix *A = new_permuted_dense_full(2, 3, data);
-    matrix *AT = A->transpose_alloc(A);
-    A->transpose_fill_values(A, AT);
+    matrix *AT = transpose_matrices_alloc(A);
+    transpose_matrices_fill_values(A, AT);
 
     mu_assert("transpose m", AT->m == 3);
     mu_assert("transpose n", AT->n == 2);

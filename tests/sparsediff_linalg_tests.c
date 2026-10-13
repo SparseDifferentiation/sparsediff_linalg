@@ -227,7 +227,7 @@ int main(void)
     mu_run_test(test_spd_DA_fill_values, tests_run);
     mu_run_test(test_spd_ATA_alloc, tests_run);
     mu_run_test(test_spd_ATDA_fill_values, tests_run);
-    mu_run_test(test_spd_vtable_transpose, tests_run);
+    mu_run_test(test_spd_transpose, tests_run);
     mu_run_test(test_spd_vtable_row_gather, tests_run);
     mu_run_test(test_spd_vtable_diag_vec, tests_run);
     mu_run_test(test_YT_kron_I, tests_run);

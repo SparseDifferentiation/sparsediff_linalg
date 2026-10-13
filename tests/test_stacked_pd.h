@@ -1275,8 +1275,8 @@ const char *test_spd_ATDA_fill_values(void)
     return 0;
 }
 
-/* Vtable: transpose_alloc + transpose_fill_values. */
-const char *test_spd_vtable_transpose(void)
+/* transpose_matrices_alloc + transpose_matrices_fill_values on a stacked_pd. */
+const char *test_spd_transpose(void)
 {
     int row_perm_0[2] = {0, 1};
     int col_perm_0[2] = {0, 1};
@@ -1291,8 +1291,8 @@ const char *test_spd_vtable_transpose(void)
     permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
     matrix *src_m = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
 
-    matrix *out_m = src_m->transpose_alloc(src_m);
-    src_m->transpose_fill_values(src_m, out_m);
+    matrix *out_m = transpose_matrices_alloc(src_m);
+    transpose_matrices_fill_values(src_m, out_m);
     stacked_pd *out = (stacked_pd *) out_m;
 
     /* Same expected values as test_transpose_spd_no_overlap. */
