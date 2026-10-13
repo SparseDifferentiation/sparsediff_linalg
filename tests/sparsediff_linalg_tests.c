@@ -166,6 +166,7 @@ int main(void)
     mu_run_test(test_sum_4_matrices_mixed_kinds, tests_run);
     mu_run_test(test_sum_n_matrices_mixed_kinds, tests_run);
     mu_run_test(test_sum_n_matrices_n1_n5, tests_run);
+    mu_run_test(test_sum_n_matrices_fill_add, tests_run);
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_sum_4_matrices_fill_no_transient_alloc, tests_run);
 #endif

@@ -97,6 +97,18 @@ void sum_4_matrices_fill_values(const matrix *A, const matrix *B, const matrix *
     matrix_values_changed(C);
 }
 
+/* Layout of the buffer sum_n_matrices_alloc binds to its output:
+     [n | off_0 = 0, off_1, ..., off_n | map_0 | map_1 | ... | map_{n-1}]
+   where map_k (length off_{k+1} - off_k = ops[k]->nnz) gives the position in
+   C->x of operand k's j-th value. */
+static const int *sum_n_bound(const matrix *C)
+{
+    assert(C->kind == MATRIX_SPARSE);
+    const int *b = ((const sparse_matrix *) C)->bound_iwork;
+    assert(b != NULL);
+    return b;
+}
+
 matrix *sum_n_matrices_alloc(matrix *const *ops, int n)
 {
     assert(n >= 1);
@@ -109,34 +121,36 @@ matrix *sum_n_matrices_alloc(matrix *const *ops, int n)
         total += (size_t) ops[k]->nnz;
     }
 
-    /* one map, a segment per operand back to back; bound to the output and
-       split by operand nnz at fill time */
-    int *map = (int *) sp_malloc((total > 0 ? total : 1) * sizeof(int));
+    /* header, then one map segment per operand back to back */
+    int *bound = (int *) sp_malloc(((size_t) n + 2 + total) * sizeof(int));
+    int *off = bound + 1;
+    int *map = bound + n + 2;
+    bound[0] = n;
     CSR_matrix *csr = sum_n_csr_alloc(csrs, n, map);
 
     /* The segments index the operands in CSR order. A stacked_pd's own value
        buffer is block-major, so re-index its segment to read op->x directly. */
-    int *seg = map;
+    off[0] = 0;
     for (int k = 0; k < n; k++)
     {
         if (ops[k]->kind == MATRIX_STACKED_PD)
         {
-            compose_csr_idx_map_for_spd(ops[k], csrs[k], seg);
+            compose_csr_idx_map_for_spd(ops[k], csrs[k], map + off[k]);
         }
-        seg += ops[k]->nnz;
+        off[k + 1] = off[k] + ops[k]->nnz;
     }
     sp_free(csrs);
 
     sparse_matrix *out = (sparse_matrix *) new_sparse_matrix(csr);
-    out->bound_iwork = map;
+    out->bound_iwork = bound;
     return &out->base;
 }
 
 void sum_n_matrices_fill_values(matrix *const *ops, int n, matrix *C)
 {
-    assert(C->kind == MATRIX_SPARSE);
-    const int *map = ((sparse_matrix *) C)->bound_iwork;
-    assert(map != NULL);
+    const int *b = sum_n_bound(C);
+    assert(n == b[0]);
+    const int *map = b + n + 2;
 
     memset(C->x, 0, C->nnz * sizeof(double));
     for (int k = 0; k < n; k++)
@@ -144,5 +158,23 @@ void sum_n_matrices_fill_values(matrix *const *ops, int n, matrix *C)
         accumulator(ops[k]->x, ops[k]->nnz, map, C->x);
         map += ops[k]->nnz;
     }
+    matrix_values_changed(C);
+}
+
+void sum_n_matrices_fill_zero(matrix *C)
+{
+    (void) sum_n_bound(C);
+    memset(C->x, 0, C->nnz * sizeof(double));
+    matrix_values_changed(C);
+}
+
+void sum_n_matrices_fill_add(const matrix *op, int k, matrix *C)
+{
+    const int *b = sum_n_bound(C);
+    const int *off = b + 1;
+    assert(k >= 0 && k < b[0]);
+    assert(op->nnz == off[k + 1] - off[k]);
+
+    accumulator(op->x, op->nnz, b + b[0] + 2 + off[k], C->x);
     matrix_values_changed(C);
 }

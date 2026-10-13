@@ -45,4 +45,15 @@ matrix *sum_n_matrices_alloc(matrix *const *ops, int n);
    ops must be the same array as passed to sum_n_matrices_alloc. */
 void sum_n_matrices_fill_values(matrix *const *ops, int n, matrix *C);
 
+/* Start an incremental fill of C (from sum_n_matrices_alloc): zero its values.
+   Then call sum_n_matrices_fill_add once per operand, each right after that
+   operand's values are final. Unlike sum_n_matrices_fill_values, this stays
+   correct when evaluating a later operand overwrites an earlier one's values
+   (operands sharing a subexpression). */
+void sum_n_matrices_fill_zero(matrix *C);
+
+/* C += op, where op is operand k of the sum_n_matrices_alloc that built C. Reads
+   op->x through the map bound at alloc; bumps C's values_version. */
+void sum_n_matrices_fill_add(const matrix *op, int k, matrix *C);
+
 #endif /* MATRIX_SUM_H */

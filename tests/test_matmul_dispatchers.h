@@ -2834,6 +2834,54 @@ const char *test_sum_n_matrices_n1_n5(void)
     return 0;
 }
 
+/* sum_n_matrices_fill_zero + fill_add on the sum_4 fixture: adding the operands
+   one by one matches fill_values, and an operand overwritten after it was added
+   (as a shared subexpression's later evaluation would) does not leak in. */
+const char *test_sum_n_matrices_fill_add(void)
+{
+    matrix *A, *B, *D, *E;
+    s4_fixture(&A, &B, &D, &E);
+    matrix *ops[4] = {A, B, D, E};
+    matrix *C = sum_n_matrices_alloc(ops, 4);
+    matrix *C_ref = sum_n_matrices_alloc(ops, 4);
+    sum_n_matrices_fill_values(ops, 4, C_ref);
+
+    /* one operand at a time equals the one-shot fill */
+    sum_n_matrices_fill_zero(C);
+    for (int k = 0; k < 4; k++) sum_n_matrices_fill_add(ops[k], k, C);
+    mu_assert("incremental matches fill_values",
+              cmp_double_array(C->x, C_ref->x, C->nnz));
+
+    /* reference from A's values before the overwrite */
+    double *ref = dense_of(A);
+    double *dB = dense_of(B);
+    double *dD = dense_of(D);
+    double *dE = dense_of(E);
+    for (int c = 0; c < 30; c++) ref[c] += dB[c] + dD[c] + dE[c];
+
+    sum_n_matrices_fill_zero(C);
+    sum_n_matrices_fill_add(A, 0, C);
+    for (int ii = 0; ii < A->nnz; ii++) A->x[ii] = -A->x[ii];
+    matrix_values_changed(A);
+    for (int k = 1; k < 4; k++) sum_n_matrices_fill_add(ops[k], k, C);
+    double *got = dense_of(C);
+    mu_assert("overwrite after add does not leak in",
+              cmp_double_array(got, ref, 30));
+
+    sp_free(got);
+    sp_free(ref);
+    sp_free(dB);
+    sp_free(dD);
+    sp_free(dE);
+    free_matrix(C_ref);
+    free_matrix(C);
+    free_matrix(E);
+    free_matrix(D);
+    free_matrix(B);
+    free_matrix(A);
+    return 0;
+}
+
 #ifdef SP_TRACK_MEMORY
 typedef struct
 {
