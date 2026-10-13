@@ -86,4 +86,18 @@ void coalesce_spd_fill_values(const stacked_pd *A, stacked_pd *C);
    responsible for zeroing C->base.x first. */
 void coalesce_spd_fill_values_accumulate(const stacked_pd *A, stacked_pd *C);
 
+/* Re-index `idx_map` in place from CSR ordering to spd-native ordering
+   (block-major). Used by the matrix sums, which build idx_maps from a
+   `to_csr` view at init time and read spd values directly at eval time,
+   avoiding the per-call csr_cache->x refresh.
+
+   - `spd` must be of kind MATRIX_STACKED_PD (asserted) and `csr` must
+     correspond to it (csr is the result of spd->to_csr).
+   - `idx_map` has length `csr->nnz` (= `spd->base.nnz`); on entry each
+     entry is indexed by CSR position, on exit each entry is indexed by
+     `spd->base.x` position. The buffer is reused; the caller's pointer
+     stays valid. */
+void compose_csr_idx_map_for_spd(const matrix *spd, const CSR_matrix *csr,
+                                 int *idx_map);
+
 #endif /* INTERNAL_STACKED_PD_H */

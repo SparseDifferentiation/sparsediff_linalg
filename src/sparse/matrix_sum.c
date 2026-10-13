@@ -18,7 +18,7 @@
 #include "sparsediff_linalg/matrix_sum.h"
 #include "internal/csr_kernels.h"
 #include "internal/sparse_matrix.h"
-#include "sparsediff_linalg/csr_kernels.h"
+#include "internal/stacked_pd.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <string.h>

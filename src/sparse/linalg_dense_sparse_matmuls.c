@@ -20,7 +20,6 @@
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/cblas_wrapper.h"
-#include "sparsediff_linalg/csr_kernels.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <stdlib.h>
