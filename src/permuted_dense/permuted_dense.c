@@ -124,48 +124,6 @@ static void permuted_dense_vtable_row_gather_fill_values(const matrix *self,
     matrix_values_changed(out);
 }
 
-matrix *diag_vec_pd_alloc(const permuted_dense *A)
-{
-    int n = A->base.m;
-    int out_m = n * n;
-
-    if (A->m0 == 0)
-    {
-        return new_permuted_dense(out_m, A->base.n, 0, A->n0, NULL, A->col_perm,
-                                  NULL);
-    }
-
-    int *new_row_perm = (int *) sp_malloc(A->m0 * sizeof(int));
-    for (int ii = 0; ii < A->m0; ii++)
-    {
-        new_row_perm[ii] = A->row_perm[ii] * (n + 1);
-    }
-    matrix *out = new_permuted_dense(out_m, A->base.n, A->m0, A->n0, new_row_perm,
-                                     A->col_perm, NULL);
-    sp_free(new_row_perm);
-    return out;
-}
-
-void diag_vec_pd_fill_values(const permuted_dense *A, permuted_dense *C)
-{
-    if (A->m0 == 0)
-    {
-        return;
-    }
-    memcpy(C->X, A->X, A->m0 * A->n0 * sizeof(double));
-}
-
-static matrix *permuted_dense_vtable_diag_vec_alloc(matrix *self)
-{
-    return diag_vec_pd_alloc((const permuted_dense *) self);
-}
-
-static void permuted_dense_vtable_diag_vec_fill_values(matrix *self, matrix *out)
-{
-    diag_vec_pd_fill_values((const permuted_dense *) self, (permuted_dense *) out);
-    matrix_values_changed(out);
-}
-
 /* ===== PD as the constant left operand of y = kron(I_p, A) @ x. Restricted to
    full-block PDs (m0 == m, n0 == n, identity perms) — the only operator shape
    any caller needs today. */
@@ -270,8 +228,6 @@ static void wire_vtable(permuted_dense *pd)
     pd->base.to_csr = permuted_dense_to_csr;
     pd->base.row_gather_alloc = permuted_dense_vtable_row_gather_alloc;
     pd->base.row_gather_fill_values = permuted_dense_vtable_row_gather_fill_values;
-    pd->base.diag_vec_alloc = permuted_dense_vtable_diag_vec_alloc;
-    pd->base.diag_vec_fill_values = permuted_dense_vtable_diag_vec_fill_values;
     pd->base.row_reduce_alloc = permuted_dense_vtable_row_reduce_alloc;
     pd->base.row_reduce_fill_values = permuted_dense_vtable_row_reduce_fill_values;
 }

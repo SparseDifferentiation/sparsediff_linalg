@@ -94,10 +94,12 @@ int main(void)
     mu_run_test(test_row_reduce_spd_cross_block_accumulate, tests_run);
     mu_run_test(test_row_reduce_spd_within_block, tests_run);
     mu_run_test(test_row_reduce_spd_all_to_one, tests_run);
+    mu_run_test(test_row_reduce_diag_vec_sparse, tests_run);
+    mu_run_test(test_row_reduce_diag_vec_pd, tests_run);
+    mu_run_test(test_row_reduce_diag_vec_spd, tests_run);
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_row_reduce_spd_fill_no_transient_alloc, tests_run);
 #endif
-    mu_run_test(test_permuted_dense_diag_vec, tests_run);
     mu_run_test(test_permuted_dense_BTA_matching_row_perm, tests_run);
     mu_run_test(test_permuted_dense_BTA_empty_overlap, tests_run);
     mu_run_test(test_permuted_dense_BTA_partial_overlap, tests_run);
@@ -229,7 +231,6 @@ int main(void)
     mu_run_test(test_spd_ATDA_fill_values, tests_run);
     mu_run_test(test_spd_transpose, tests_run);
     mu_run_test(test_spd_vtable_row_gather, tests_run);
-    mu_run_test(test_spd_vtable_diag_vec, tests_run);
     mu_run_test(test_YT_kron_I, tests_run);
     mu_run_test(test_YT_kron_I_larger, tests_run);
     mu_run_test(test_I_kron_X, tests_run);

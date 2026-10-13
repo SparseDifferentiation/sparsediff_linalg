@@ -52,12 +52,6 @@ typedef matrix *(*matrix_row_gather_alloc_fn)(const matrix *A, const int *map,
 /* Fill values of C = A[map, :] */
 typedef void (*matrix_row_gather_fill_values_fn)(const matrix *A, matrix *C);
 
-/* diag_vec: A is an (n, A->n) Jacobian for a length-n vector; output is
-   (n*n, A->n) where row i lands at output row i*(n+1) (column-major
-   diagonal positions). Other output rows are structurally zero. */
-typedef matrix *(*matrix_diag_vec_alloc_fn)(matrix *A);
-typedef void (*matrix_diag_vec_fill_values_fn)(matrix *A, matrix *out);
-
 /* Allocate C = row-reduce of A: C[j, :] = sum of rows i with group[i] == j,
    group[i] in [0, m_out). C stores the reduction map internally, so the fill
    takes none. */
@@ -91,8 +85,6 @@ struct matrix
     /* Atom-specific ops */
     matrix_row_gather_alloc_fn row_gather_alloc;
     matrix_row_gather_fill_values_fn row_gather_fill_values;
-    matrix_diag_vec_alloc_fn diag_vec_alloc;
-    matrix_diag_vec_fill_values_fn diag_vec_fill_values;
     matrix_row_reduce_alloc_fn row_reduce_alloc;
     matrix_row_reduce_fill_values_fn row_reduce_fill_values;
 

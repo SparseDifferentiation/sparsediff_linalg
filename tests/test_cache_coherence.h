@@ -390,12 +390,6 @@ static const char *cc_check_vtable_bumps(enum cc_kind kind)
     if (!err && !cc_bumped_once(R, v)) err = "row_reduce_fill_values";
     free_matrix(R);
 
-    matrix *DV = A->diag_vec_alloc(A);
-    v = DV->values_version;
-    A->diag_vec_fill_values(A, DV);
-    if (!err && !cc_bumped_once(DV, v)) err = "diag_vec_fill_values";
-    free_matrix(DV);
-
     free_matrix(A);
     return err;
 }

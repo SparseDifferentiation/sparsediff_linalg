@@ -386,39 +386,6 @@ const char *test_permuted_dense_row_gather(void)
     return 0;
 }
 
-/* PD diag_vec_alloc / diag_vec_fill_values.
-   Source PD shape (3, 6) with m0=2 (rows 0 and 2) -> output PD shape
-   (9, 6) with the same 2 dense rows mapped to positions {0, 8} = {0*4, 2*4}. */
-const char *test_permuted_dense_diag_vec(void)
-{
-    int row_perm[2] = {0, 2};
-    int col_perm[2] = {1, 4};
-    double X[4] = {1.0, 2.0, 3.0, 4.0};
-    matrix *M = new_permuted_dense(3, 6, 2, 2, row_perm, col_perm, X);
-
-    matrix *out = M->diag_vec_alloc(M);
-    permuted_dense *out_pd = (permuted_dense *) out;
-
-    mu_assert("out m", out->m == 9);
-    mu_assert("out n", out->n == 6);
-    mu_assert("m0", out_pd->m0 == 2);
-    mu_assert("n0", out_pd->n0 == 2);
-    /* row_perm = {0*(n+1), 2*(n+1)} = {0, 8} */
-    int expected_rp[2] = {0, 8};
-    mu_assert("row_perm", cmp_int_array(out_pd->row_perm, expected_rp, 2));
-    int expected_cp[2] = {1, 4};
-    mu_assert("col_perm", cmp_int_array(out_pd->col_perm, expected_cp, 2));
-
-    M->diag_vec_fill_values(M, out);
-    /* X is identical to the source X */
-    double expected_X[4] = {1.0, 2.0, 3.0, 4.0};
-    mu_assert("values", cmp_double_array(out_pd->X, expected_X, 4));
-
-    free_matrix(out);
-    free_matrix(M);
-    return 0;
-}
-
 /* ---- Helpers for BTA / BTDA tests ---- */
 
 /* Scatter a PD into a dense m x n_global buffer (row-major), zero-filled.

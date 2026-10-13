@@ -1381,61 +1381,6 @@ const char *test_spd_vtable_row_gather(void)
     return 0;
 }
 
-/* diag_vec_* on spd: per-block row_perm entries are rescaled r -> r*(n+1);
-   X buffers are unchanged; structure is preserved (same n_blocks). */
-const char *test_spd_vtable_diag_vec(void)
-{
-    /* 4x4 spd. Input represents the Jacobian of a length-4 vector w.r.t.
-       4 variables. Output represents the Jacobian of diag(v) (16x4) with
-       only diagonal rows {0, 5, 10, 15} populated.
-       Block 0: rows {0, 2}, cols {0, 1}, X = [[1, 2], [3, 4]]
-       Block 1: rows {1, 3}, cols {2, 3}, X = [[5, 6], [7, 8]]              */
-    int row_perm_0[2] = {0, 2};
-    int col_perm_0[2] = {0, 1};
-    double X0[4] = {1.0, 2.0, 3.0, 4.0};
-    matrix *blk0 = new_permuted_dense(4, 4, 2, 2, row_perm_0, col_perm_0, X0);
-
-    int row_perm_1[2] = {1, 3};
-    int col_perm_1[2] = {2, 3};
-    double X1[4] = {5.0, 6.0, 7.0, 8.0};
-    matrix *blk1 = new_permuted_dense(4, 4, 2, 2, row_perm_1, col_perm_1, X1);
-
-    permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
-    matrix *M = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
-
-    matrix *C_m = M->diag_vec_alloc(M);
-    M->diag_vec_fill_values(M, C_m);
-    stacked_pd *C = (stacked_pd *) C_m;
-
-    mu_assert("n_blocks", C->n_blocks == 2);
-    mu_assert("base.m", C_m->m == 16);
-    mu_assert("base.n", C_m->n == 4);
-
-    /* Block 0: row_perm = {0*5, 2*5} = {0, 10}; col_perm and X unchanged. */
-    permuted_dense *out0 = C->blocks[0];
-    int expected_row_perm_0[2] = {0, 10};
-    mu_assert("out0 m0", out0->m0 == 2);
-    mu_assert("out0 n0", out0->n0 == 2);
-    mu_assert("out0 row_perm",
-              cmp_int_array(out0->row_perm, expected_row_perm_0, 2));
-    mu_assert("out0 col_perm", cmp_int_array(out0->col_perm, col_perm_0, 2));
-    mu_assert("out0 X", cmp_double_array(out0->X, X0, 4));
-
-    /* Block 1: row_perm = {1*5, 3*5} = {5, 15}; col_perm and X unchanged. */
-    permuted_dense *out1 = C->blocks[1];
-    int expected_row_perm_1[2] = {5, 15};
-    mu_assert("out1 m0", out1->m0 == 2);
-    mu_assert("out1 n0", out1->n0 == 2);
-    mu_assert("out1 row_perm",
-              cmp_int_array(out1->row_perm, expected_row_perm_1, 2));
-    mu_assert("out1 col_perm", cmp_int_array(out1->col_perm, col_perm_1, 2));
-    mu_assert("out1 X", cmp_double_array(out1->X, X1, 4));
-
-    free_matrix(C_m);
-    free_matrix(M);
-    return 0;
-}
-
 /* ---------------------------------------------------------------- */
 /* BA_spd_* primitive tests: C = B @ A where B is stacked_pd and A is */
 /* CSC / PD / spd. Kept as siblings of the BTA_spd_* family in the    */

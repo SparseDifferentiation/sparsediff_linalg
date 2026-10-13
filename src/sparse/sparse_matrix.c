@@ -133,46 +133,6 @@ static void sparse_row_gather_fill_values(const matrix *self, matrix *out)
     matrix_values_changed(out);
 }
 
-static matrix *sparse_diag_vec_alloc(matrix *self)
-{
-    CSR_matrix *Jx = ((sparse_matrix *) self)->csr;
-    int n = self->m;
-    int out_m = n * n;
-    CSR_matrix *J = new_CSR_matrix(out_m, self->n, Jx->nnz);
-
-    int nnz = 0;
-    int next_diag = 0;
-    for (int row = 0; row < out_m; row++)
-    {
-        J->p[row] = nnz;
-        if (row == next_diag)
-        {
-            int child_row = row / (n + 1);
-            int len = Jx->p[child_row + 1] - Jx->p[child_row];
-            memcpy(J->i + nnz, Jx->i + Jx->p[child_row], len * sizeof(int));
-            nnz += len;
-            next_diag += n + 1;
-        }
-    }
-    J->p[out_m] = nnz;
-    J->nnz = nnz;
-    return new_sparse_matrix(J);
-}
-
-static void sparse_diag_vec_fill_values(matrix *self, matrix *out)
-{
-    CSR_matrix *Jx = ((sparse_matrix *) self)->csr;
-    CSR_matrix *J = ((sparse_matrix *) out)->csr;
-    int n = self->m;
-    for (int i = 0; i < n; i++)
-    {
-        int out_row = i * (n + 1);
-        int len = J->p[out_row + 1] - J->p[out_row];
-        memcpy(J->x + J->p[out_row], Jx->x + Jx->p[i], len * sizeof(double));
-    }
-    matrix_values_changed(out);
-}
-
 static matrix *sparse_row_reduce_alloc(const matrix *self, const int *group,
                                        int m_out)
 {
@@ -285,8 +245,6 @@ static void wire_vtable(sparse_matrix *sm)
     sm->base.to_csr = sparse_to_csr;
     sm->base.row_gather_alloc = sparse_row_gather_alloc;
     sm->base.row_gather_fill_values = sparse_row_gather_fill_values;
-    sm->base.diag_vec_alloc = sparse_diag_vec_alloc;
-    sm->base.diag_vec_fill_values = sparse_diag_vec_fill_values;
     sm->base.row_reduce_alloc = sparse_row_reduce_alloc;
     sm->base.row_reduce_fill_values = sparse_row_reduce_fill_values;
     sm->base.free_fn = sparse_free;
