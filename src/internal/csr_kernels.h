@@ -25,6 +25,13 @@
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matrix.h"
 
+/* Compute sparsity pattern of C = A + B (and sets C->nnz). Internal: consumers
+   go through sum_matrices_* (matrix_sum.h). */
+void sum_csr_alloc(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);
+
+/* Fills values of C = A + B (assuming C's sparsity pattern is set) */
+void sum_csr_fill_values(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);
+
 /* Fills values of C = diag(d1) * A + diag(d2) * B (assuming C's sparsity is set)*/
 void sum_scaled_csr_matrices_fill_values(const CSR_matrix *A, const CSR_matrix *B,
                                          CSR_matrix *C, const double *d1,
