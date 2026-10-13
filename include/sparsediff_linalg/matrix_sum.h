@@ -41,8 +41,8 @@ void sum_4_matrices_fill_values(const matrix *A, const matrix *B, const matrix *
    Uses CSR matrices internally; C is a sparse_matrix. */
 matrix *sum_n_matrices_alloc(matrix *const *ops, int n);
 
-/* Fill values of C = ops[0] + ... + ops[n-1], with ops as passed to the alloc.
-   Uses CSR matrices internally. */
+/* Fill values of C = ops[0] + ... + ops[n-1] through the maps bound at alloc;
+   ops must be the same array as passed to sum_n_matrices_alloc. */
 void sum_n_matrices_fill_values(matrix *const *ops, int n, matrix *C);
 
 #endif /* MATRIX_SUM_H */

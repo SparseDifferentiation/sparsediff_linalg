@@ -102,40 +102,33 @@ matrix *sum_n_matrices_alloc(matrix *const *ops, int n)
     assert(n >= 1);
     const CSR_matrix **csrs =
         (const CSR_matrix **) sp_malloc((size_t) n * sizeof(CSR_matrix *));
-    int **maps = (int **) sp_malloc((size_t) n * sizeof(int *));
+    size_t total = 0;
     for (int k = 0; k < n; k++)
     {
         csrs[k] = ops[k]->to_csr(ops[k]);
+        total += (size_t) ops[k]->nnz;
     }
-    CSR_matrix *csr = sum_n_csr_alloc(csrs, n, maps);
 
-    /* The maps index the operands in CSR order. A stacked_pd's own value buffer
-       is block-major, so re-index its map to read op->x directly at fill time. */
-    size_t total = 0;
+    /* one map, a segment per operand back to back; bound to the output and
+       split by operand nnz at fill time */
+    int *map = (int *) sp_malloc((total > 0 ? total : 1) * sizeof(int));
+    CSR_matrix *csr = sum_n_csr_alloc(csrs, n, map);
+
+    /* The segments index the operands in CSR order. A stacked_pd's own value
+       buffer is block-major, so re-index its segment to read op->x directly. */
+    int *seg = map;
     for (int k = 0; k < n; k++)
     {
         if (ops[k]->kind == MATRIX_STACKED_PD)
         {
-            compose_csr_idx_map_for_spd(ops[k], csrs[k], maps[k]);
+            compose_csr_idx_map_for_spd(ops[k], csrs[k], seg);
         }
-        total += (size_t) ops[k]->nnz;
+        seg += ops[k]->nnz;
     }
-
-    /* bind the maps back to back inside the output; the fill splits them by
-       operand nnz */
-    int *all = (int *) sp_malloc((total > 0 ? total : 1) * sizeof(int));
-    size_t off = 0;
-    for (int k = 0; k < n; k++)
-    {
-        memcpy(all + off, maps[k], (size_t) ops[k]->nnz * sizeof(int));
-        off += (size_t) ops[k]->nnz;
-        sp_free(maps[k]);
-    }
-    sp_free(maps);
     sp_free(csrs);
 
     sparse_matrix *out = (sparse_matrix *) new_sparse_matrix(csr);
-    out->bound_iwork = all;
+    out->bound_iwork = map;
     return &out->base;
 }
 

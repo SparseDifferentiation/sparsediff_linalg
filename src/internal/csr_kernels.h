@@ -39,11 +39,12 @@ CSR_matrix *sum_4_csr_alloc(const CSR_matrix *A, const CSR_matrix *B,
                             int *idx_maps[4]);
 
 /* Compute sparsity pattern of out = ops[0] + ... + ops[n-1] (n >= 1, all of the
-   same shape). Like sum_4_csr_alloc, it also allocates (sp_malloc, caller frees)
-   one idx_map per input: idx_maps[k] has size ops[k]->nnz, and idx_maps[k][j] is
-   the position in out->x of that input's j-th nonzero (consumed by accumulator).
-   Cost is O(total nnz + per-row sort of the unique columns), independent of n. */
-CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int **idx_maps);
+   same shape). Also fills the caller-allocated idx_map, of length sum_k
+   ops[k]->nnz: one segment per input, back to back, where entry j of input k's
+   segment is the position in out->x of that input's j-th nonzero (consumed by
+   accumulator). Cost is O(m * n + total nnz + per-row sort of the unique
+   columns). */
+CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int *idx_map);
 
 /* C = A @ B where A is CSR_matrix, B is CSC_matrix. Result C is CSR_matrix.
    Allocates and precomputes the sparsity pattern; no workspace required.

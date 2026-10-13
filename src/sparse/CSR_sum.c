@@ -228,7 +228,7 @@ CSR_matrix *sum_4_csr_alloc(const CSR_matrix *A, const CSR_matrix *B,
     return out;
 }
 
-CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int **idx_maps)
+CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int *idx_map)
 {
     assert(n >= 1);
     int m = ops[0]->m;
@@ -241,17 +241,12 @@ CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int **idx_maps)
     }
     int nnz_ub = (int) MIN(total_nnz, (long long) sat_mul_int(m, n_cols));
 
-    /* allocate output and index maps */
     CSR_matrix *out = new_CSR_matrix(m, n_cols, nnz_ub);
-    for (int k = 0; k < n; k++)
-    {
-        idx_maps[k] = (int *) sp_malloc(ops[k]->nnz * sizeof(int));
-    }
 
     /* pos[j] is column j's position in out. A value below the current row's
        start was set in an earlier row, so it marks column j unseen in this
        row. */
-    int *pos = (int *) sp_malloc((n_cols > 0 ? n_cols : 1) * sizeof(int));
+    int *pos = (int *) sp_malloc(n_cols * sizeof(int));
     for (int j = 0; j < n_cols; j++)
     {
         pos[j] = -1;
@@ -283,12 +278,14 @@ CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int **idx_maps)
         {
             pos[out->i[jj]] = jj;
         }
+        int *map_k = idx_map;
         for (int k = 0; k < n; k++)
         {
             for (int jj = ops[k]->p[i]; jj < ops[k]->p[i + 1]; jj++)
             {
-                idx_maps[k][jj] = pos[ops[k]->i[jj]];
+                map_k[jj] = pos[ops[k]->i[jj]];
             }
+            map_k += ops[k]->nnz;
         }
     }
 
