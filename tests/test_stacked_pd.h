@@ -1149,8 +1149,8 @@ const char *test_BA_pd_spd_alloc_then_fill_values(void)
     return 0;
 }
 
-/* Vtable: copy_sparsity through M->copy_sparsity(M). */
-const char *test_spd_vtable_copy_sparsity(void)
+/* copy_sparsity_matrices_alloc on a stacked_pd. */
+const char *test_spd_copy_sparsity(void)
 {
     int row_perm_0[2] = {0, 1};
     int col_perm_0[2] = {0, 2};
@@ -1165,7 +1165,7 @@ const char *test_spd_vtable_copy_sparsity(void)
     permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
     matrix *M = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
 
-    matrix *out_m = M->copy_sparsity(M);
+    matrix *out_m = copy_sparsity_matrices_alloc(M);
     stacked_pd *out = (stacked_pd *) out_m;
 
     mu_assert("n_blocks", out->n_blocks == 2);
@@ -1179,8 +1179,8 @@ const char *test_spd_vtable_copy_sparsity(void)
     return 0;
 }
 
-/* Vtable: DA_fill_values through A->DA_fill_values(d, A, C). */
-const char *test_spd_vtable_DA_fill_values(void)
+/* DA_matrices_fill_values on a stacked_pd. */
+const char *test_spd_DA_fill_values(void)
 {
     int row_perm_0[2] = {0, 1};
     int col_perm_0[2] = {0, 1};
@@ -1197,8 +1197,8 @@ const char *test_spd_vtable_DA_fill_values(void)
 
     double d[4] = {10.0, 100.0, 1000.0, 10000.0};
 
-    matrix *C_m = A_m->copy_sparsity(A_m);
-    A_m->DA_fill_values(d, A_m, C_m);
+    matrix *C_m = copy_sparsity_matrices_alloc(A_m);
+    DA_matrices_fill_values(d, A_m, C_m);
     stacked_pd *C = (stacked_pd *) C_m;
 
     double C0_X_exp[4] = {10.0, 20.0, 300.0, 400.0};

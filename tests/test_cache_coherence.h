@@ -317,10 +317,10 @@ static const char *cc_check_vtable_bumps(enum cc_kind kind)
     uint64_t v;
     const char *err = 0;
 
-    matrix *DA = A->copy_sparsity(A);
+    matrix *DA = copy_sparsity_matrices_alloc(A);
     v = DA->values_version;
-    A->DA_fill_values(d, A, DA);
-    if (!cc_bumped_once(DA, v)) err = "DA_fill_values";
+    DA_matrices_fill_values(d, A, DA);
+    if (!cc_bumped_once(DA, v)) err = "DA_matrices_fill_values";
     free_matrix(DA);
 
     matrix *ATA = A->ATA_alloc(A);

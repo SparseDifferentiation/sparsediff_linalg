@@ -55,13 +55,6 @@ typedef CSC_matrix *(*matrix_block_left_mult_sparsity_fn)(const matrix *A,
 typedef void (*matrix_block_left_mult_values_fn)(const matrix *A,
                                                  const CSC_matrix *J, CSC_matrix *C);
 
-/* Allocate a new matrix with the same sparsity as A */
-typedef matrix *(*matrix_copy_sparsity_fn)(const matrix *A);
-
-/* Fill values of C = diag(d) @ A */
-typedef void (*matrix_DA_fill_values_fn)(const double *d, const matrix *A,
-                                         matrix *C);
-
 /* Allocate C = AT @ A */
 typedef matrix *(*matrix_ATA_alloc_fn)(matrix *A);
 
@@ -124,8 +117,6 @@ struct matrix
     matrix_block_left_mult_values_fn block_left_mult_values;
 
     /* Chain-rule ops */
-    matrix_copy_sparsity_fn copy_sparsity;
-    matrix_DA_fill_values_fn DA_fill_values;
     matrix_ATA_alloc_fn ATA_alloc;
     matrix_ATDA_fill_values_fn ATDA_fill_values;
     matrix_transpose_alloc_fn transpose_alloc;
@@ -160,6 +151,14 @@ static inline void free_matrix(matrix *m)
         m->free_fn(m);
     }
 }
+
+/* Allocate a new matrix with the same kind and sparsity as A. Values are
+   uninitialized. */
+matrix *copy_sparsity_matrices_alloc(const matrix *A);
+
+/* Fill values of C = diag(d) @ A, where len(d) = A->m. C must have been
+   allocated by copy_sparsity_matrices_alloc(A). Bumps C's values_version. */
+void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C);
 
 /* ---- Constructors of the three kinds. Each returns a matrix handle; the kinds'
    layouts are private. ---- */

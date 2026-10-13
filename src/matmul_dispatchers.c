@@ -11,6 +11,7 @@
  */
 #include "sparsediff_linalg/matmul.h"
 
+#include "internal/CSR_matrix.h"
 #include "internal/csr_kernels.h"
 #include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
@@ -21,6 +22,7 @@
 #include "internal/stacked_pd_linalg.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/matrix.h"
 #include <assert.h>
 
 /* Forward declarations of the fixed-B dispatchers used internally by
@@ -474,4 +476,39 @@ void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *
                                           matrix *C)
 {
     dense_kron_fill_values(A, m, J, C, KRON_A_I);
+}
+
+matrix *copy_sparsity_matrices_alloc(const matrix *A)
+{
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        return copy_sparsity_pd_alloc((const permuted_dense *) A);
+    }
+    if (A->kind == MATRIX_STACKED_PD)
+    {
+        return copy_sparsity_spd_alloc((const stacked_pd *) A);
+    }
+    /* A is sparse_matrix */
+    return new_sparse_matrix(
+        new_csr_copy_sparsity(((const sparse_matrix *) A)->csr));
+}
+
+void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C)
+{
+    assert(C->kind == A->kind);
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        DA_pd_fill_values(d, (const permuted_dense *) A, (permuted_dense *) C);
+    }
+    else if (A->kind == MATRIX_STACKED_PD)
+    {
+        DA_spd_fill_values(d, (const stacked_pd *) A, (stacked_pd *) C);
+    }
+    else
+    {
+        /* A is sparse_matrix */
+        DA_csr_fill_values(d, ((const sparse_matrix *) A)->csr,
+                           ((sparse_matrix *) C)->csr);
+    }
+    matrix_values_changed(C);
 }

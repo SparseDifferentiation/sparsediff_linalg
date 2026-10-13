@@ -212,8 +212,8 @@ int main(void)
     mu_run_test(test_BA_pd_spd_empty_A, tests_run);
     mu_run_test(test_BA_pd_spd_overlapping_col_perms, tests_run);
     mu_run_test(test_BA_pd_spd_alloc_then_fill_values, tests_run);
-    mu_run_test(test_spd_vtable_copy_sparsity, tests_run);
-    mu_run_test(test_spd_vtable_DA_fill_values, tests_run);
+    mu_run_test(test_spd_copy_sparsity, tests_run);
+    mu_run_test(test_spd_DA_fill_values, tests_run);
     mu_run_test(test_spd_vtable_ATA_alloc, tests_run);
     mu_run_test(test_spd_vtable_ATDA_fill_values, tests_run);
     mu_run_test(test_spd_vtable_transpose, tests_run);

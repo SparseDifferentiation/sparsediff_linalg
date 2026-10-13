@@ -26,7 +26,7 @@
 CSR_matrix *new_csr_copy_sparsity(const CSR_matrix *A);
 
 /* fills values of C = diag(d) @ A */
-void DA_fill_values(const double *d, const CSR_matrix *A, CSR_matrix *C);
+void DA_csr_fill_values(const double *d, const CSR_matrix *A, CSR_matrix *C);
 
 /* get value at position (row, col) in A */
 double csr_get_value(const CSR_matrix *A, int row, int col);

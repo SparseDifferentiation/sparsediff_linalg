@@ -83,7 +83,7 @@ void copy_CSR_matrix(const CSR_matrix *A, CSR_matrix *C)
     memcpy(C->x, A->x, A->nnz * sizeof(double));
 }
 
-void DA_fill_values(const double *d, const CSR_matrix *A, CSR_matrix *C)
+void DA_csr_fill_values(const double *d, const CSR_matrix *A, CSR_matrix *C)
 {
     memcpy(C->x, A->x, A->nnz * sizeof(double));
 

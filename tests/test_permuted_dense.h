@@ -128,7 +128,7 @@ const char *test_permuted_dense_to_csr_single_col(void)
     return 0;
 }
 
-/* DA_fill_values: compare against CSR_matrix DA_fill_values on the equivalent
+/* DA_pd_fill_values: compare against DA_csr_fill_values on the equivalent
    CSR_matrix.
 
    PD is the 5x6 matrix from the basic to_csr test, with d a length-5
@@ -147,10 +147,10 @@ const char *test_DA_pd_fill_values(void)
 
     DA_pd_fill_values(d, pd, pd_out);
 
-    /* Ground truth: build CSR_matrix of self, run DA_fill_values, compare. */
+    /* Ground truth: build CSR_matrix of self, run DA_csr_fill_values, compare. */
     CSR_matrix *csr = M->to_csr(M);
     CSR_matrix *csr_expected = new_csr_copy_sparsity(csr);
-    DA_fill_values(d, csr, csr_expected);
+    DA_csr_fill_values(d, csr, csr_expected);
 
     CSR_matrix *csr_out = M_out->to_csr(M_out);
     mu_assert("x", cmp_double_array(csr_out->x, csr_expected->x, csr->nnz));
@@ -600,7 +600,7 @@ const char *test_permuted_dense_BTDA_decomposition(void)
     permuted_dense *B = (permuted_dense *) B_m;
 
     /* tmp has the same sparsity as A. */
-    matrix *tmp_m = A_m->copy_sparsity(A_m);
+    matrix *tmp_m = copy_sparsity_matrices_alloc(A_m);
     permuted_dense *tmp = (permuted_dense *) tmp_m;
     DA_pd_fill_values(w, A, tmp);
 
@@ -668,7 +668,7 @@ const char *test_permuted_dense_BTDA_matching_row_perm(void)
     permuted_dense *C = (permuted_dense *) C_m;
     BTDA_pd_pd_fill_values(B, d, A, C);
 
-    matrix *tmp_m = A_m->copy_sparsity(A_m);
+    matrix *tmp_m = copy_sparsity_matrices_alloc(A_m);
     permuted_dense *tmp = (permuted_dense *) tmp_m;
     DA_pd_fill_values(d, A, tmp);
     matrix *C_ref_m = BTA_pd_pd_alloc(B, tmp);
@@ -707,7 +707,7 @@ const char *test_permuted_dense_BTDA_partial_overlap(void)
     permuted_dense *C = (permuted_dense *) C_m;
     BTDA_pd_pd_fill_values(B, d, A, C);
 
-    matrix *tmp_m = A_m->copy_sparsity(A_m);
+    matrix *tmp_m = copy_sparsity_matrices_alloc(A_m);
     permuted_dense *tmp = (permuted_dense *) tmp_m;
     DA_pd_fill_values(d, A, tmp);
     matrix *C_ref_m = BTA_pd_pd_alloc(B, tmp);
