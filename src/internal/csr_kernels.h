@@ -30,6 +30,14 @@ void sum_scaled_csr_matrices_fill_values(const CSR_matrix *A, const CSR_matrix *
                                          CSR_matrix *C, const double *d1,
                                          const double *d2);
 
+/* Compute sparsity pattern of out = A + B + C + D. To fill the values in a single
+   pass, it also allocates (sp_malloc, caller frees) one idx_map per input:
+   idx_maps[k] has size equal to the nnz of the k-th input, and idx_maps[k][j] is
+   the position in out->x of that input's j-th nonzero (consumed by accumulator). */
+CSR_matrix *sum_4_csr_alloc(const CSR_matrix *A, const CSR_matrix *B,
+                            const CSR_matrix *C, const CSR_matrix *D,
+                            int *idx_maps[4]);
+
 /* Compute sparsity pattern and values for the matrix-matrix multiplication
    C = (I_p kron A) @ J where A is m x n, J is (n*p) x k, and C is (m*p) x k,
    without relying on generic sparse matrix-matrix multiplication. Specialized

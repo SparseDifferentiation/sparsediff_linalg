@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "sparsediff_linalg/matrix_sum.h"
 #include "internal/csr_kernels.h"
 #include "internal/sparse_matrix.h"
 #include "sparsediff_linalg/csr_kernels.h"
-#include "sparsediff_linalg/matmul.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <string.h>
