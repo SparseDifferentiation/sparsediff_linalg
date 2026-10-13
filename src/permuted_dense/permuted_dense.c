@@ -54,18 +54,6 @@ static void permuted_dense_free(matrix *self)
 }
 
 /* Vtable adapters — each delegates to the existing permuted_dense_* kernel. */
-static matrix *permuted_dense_vtable_copy_sparsity(const matrix *self)
-{
-    return copy_sparsity_pd_alloc((const permuted_dense *) self);
-}
-
-static void permuted_dense_vtable_DA_fill_values(const double *d, const matrix *self,
-                                                 matrix *out)
-{
-    DA_pd_fill_values(d, (const permuted_dense *) self, (permuted_dense *) out);
-    matrix_values_changed(out);
-}
-
 static matrix *permuted_dense_vtable_ATA_alloc(matrix *self)
 {
     return ATA_pd_alloc((const permuted_dense *) self);
@@ -331,8 +319,6 @@ static void wire_vtable(permuted_dense *pd)
     pd->base.block_left_mult_sparsity =
         permuted_dense_vtable_block_left_mult_sparsity;
     pd->base.block_left_mult_values = permuted_dense_vtable_block_left_mult_values;
-    pd->base.copy_sparsity = permuted_dense_vtable_copy_sparsity;
-    pd->base.DA_fill_values = permuted_dense_vtable_DA_fill_values;
     pd->base.ATA_alloc = permuted_dense_vtable_ATA_alloc;
     pd->base.ATDA_fill_values = permuted_dense_vtable_ATDA_fill_values;
     pd->base.to_csr = permuted_dense_to_csr;

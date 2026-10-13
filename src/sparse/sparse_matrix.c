@@ -19,7 +19,6 @@
 #include "internal/sparse_matrix_cache.h"
 
 #include "internal/CSC_matrix.h"
-#include "internal/CSR_matrix.h"
 #include "internal/csr_kernels.h"
 #include "internal/utils.h"
 #include "sparsediff_linalg/CSC_matrix.h"
@@ -61,7 +60,7 @@ static void sparse_free(matrix *self)
     sp_free(sm);
 }
 
-/* Forward decl: ctor is referenced by copy_sparsity below. */
+/* Forward decl: ctor is referenced by the vtable adapters below. */
 matrix *new_sparse_matrix(CSR_matrix *A);
 
 /* Build the CSC_matrix cache structure if absent. Values are NOT filled here;
@@ -90,20 +89,6 @@ const CSC_matrix *sparse_csc_fresh(const matrix *A)
         sm->csc_seen = sm->base.values_version;
     }
     return sm->csc_cache;
-}
-
-static matrix *sparse_copy_sparsity(const matrix *self)
-{
-    const sparse_matrix *sm = (const sparse_matrix *) self;
-    return new_sparse_matrix(new_csr_copy_sparsity(sm->csr));
-}
-
-static void sparse_DA_fill_values(const double *d, const matrix *self, matrix *out)
-{
-    const sparse_matrix *sm = (const sparse_matrix *) self;
-    sparse_matrix *sm_out = (sparse_matrix *) out;
-    DA_fill_values(d, sm->csr, sm_out->csr);
-    matrix_values_changed(out);
 }
 
 static matrix *sparse_ATA_alloc(matrix *self)
@@ -352,8 +337,6 @@ static void wire_vtable(sparse_matrix *sm)
     sm->base.block_left_mult_vec = sparse_block_left_mult_vec;
     sm->base.block_left_mult_sparsity = sparse_block_left_mult_sparsity;
     sm->base.block_left_mult_values = sparse_block_left_mult_values;
-    sm->base.copy_sparsity = sparse_copy_sparsity;
-    sm->base.DA_fill_values = sparse_DA_fill_values;
     sm->base.ATA_alloc = sparse_ATA_alloc;
     sm->base.ATDA_fill_values = sparse_ATDA_fill_values;
     sm->base.to_csr = sparse_to_csr;

@@ -56,18 +56,6 @@ static void stacked_pd_free(matrix *self)
 /* Vtable adapters — each downcasts matrix * to stacked_pd * and
    delegates to the corresponding public spd kernel. */
 
-static matrix *stacked_pd_vtable_copy_sparsity(const matrix *self)
-{
-    return copy_sparsity_spd_alloc((const stacked_pd *) self);
-}
-
-static void stacked_pd_vtable_DA_fill_values(const double *d, const matrix *self,
-                                             matrix *out)
-{
-    DA_spd_fill_values(d, (const stacked_pd *) self, (stacked_pd *) out);
-    matrix_values_changed(out);
-}
-
 static matrix *stacked_pd_vtable_ATA_alloc(matrix *self)
 {
     return ATA_spd_alloc((const stacked_pd *) self);
@@ -342,8 +330,6 @@ static void wire_vtable(stacked_pd *spd)
 {
     spd->base.kind = MATRIX_STACKED_PD;
     spd->base.free_fn = stacked_pd_free;
-    spd->base.copy_sparsity = stacked_pd_vtable_copy_sparsity;
-    spd->base.DA_fill_values = stacked_pd_vtable_DA_fill_values;
     spd->base.ATA_alloc = stacked_pd_vtable_ATA_alloc;
     spd->base.ATDA_fill_values = stacked_pd_vtable_ATDA_fill_values;
     spd->base.transpose_alloc = stacked_pd_vtable_transpose_alloc;
