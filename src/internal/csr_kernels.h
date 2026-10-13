@@ -25,6 +25,10 @@
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matrix.h"
 
+/* Accumulates `nnz` values from `vals` into `out` at the positions given by
+   `idx_map` (length `nnz`). Caller must zero `out` before calling. */
+void accumulator(const double *vals, int nnz, const int *idx_map, double *out);
+
 /* Compute sparsity pattern of C = A + B (and sets C->nnz). Internal: consumers
    go through sum_matrices_* (matrix_sum.h). */
 void sum_csr_alloc(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);

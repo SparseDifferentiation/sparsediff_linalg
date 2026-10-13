@@ -221,18 +221,4 @@ matrix *new_permuted_dense_full(int m, int n, const double *data);
 matrix *new_stacked_pd(int m, int n, int n_blocks, permuted_dense **blocks,
                        const int *src_block_idx_p, const int *src_block_idx);
 
-/* Re-index `idx_map` in place from CSR ordering to spd-native ordering
-   (block-major). Useful for atoms that build idx_maps from a `to_csr`
-   view at init time and want to read spd values directly at eval time,
-   avoiding the per-call csr_cache->x refresh.
-
-   - `spd` must be of kind MATRIX_STACKED_PD (asserted) and `csr` must
-     correspond to it (csr is the result of spd->to_csr).
-   - `idx_map` has length `csr->nnz` (= `spd->base.nnz`); on entry each
-     entry is indexed by CSR position, on exit each entry is indexed by
-     `spd->base.x` position. The buffer is reused; the caller's pointer
-     stays valid. */
-void compose_csr_idx_map_for_spd(const matrix *spd, const CSR_matrix *csr,
-                                 int *idx_map);
-
 #endif /* MATRIX_H */

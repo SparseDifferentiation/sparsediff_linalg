@@ -18,7 +18,6 @@
 #include "internal/csr_kernels.h"
 #include "internal/utils.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/csr_kernels.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <stdlib.h>
