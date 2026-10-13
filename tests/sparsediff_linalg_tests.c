@@ -175,7 +175,6 @@ int main(void)
     mu_run_test(test_vstack_skips_unchanged, tests_run);
     mu_run_test(test_vstack_direct_write_recopies, tests_run);
     mu_run_test(test_vstack_repeated_operand_and_n1, tests_run);
-    mu_run_test(test_vstack_no_operand_cache, tests_run);
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_vstack_fill_no_transient_alloc, tests_run);
 #endif

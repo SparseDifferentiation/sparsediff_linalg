@@ -93,8 +93,7 @@ static void stacked_pd_vtable_transpose_fill_values(const matrix *self, matrix *
 static CSR_matrix *stacked_pd_to_csr_alloc(const stacked_pd *spd)
 {
     CSR_matrix *C = new_CSR_matrix(spd->base.m, spd->base.n, spd->base.nnz);
-    pd_blocks_csr_pattern((const permuted_dense *const *) spd->blocks, spd->n_blocks,
-                          spd->base.m, 0, C->p, C->i);
+    pd_blocks_csr_pattern(spd->blocks, spd->n_blocks, spd->base.m, C->p, C->i);
     return C;
 }
 
@@ -116,8 +115,8 @@ static CSR_matrix *stacked_pd_to_csr(matrix *self)
         return spd->csr_cache;
     }
     spd->csr_seen = spd->base.values_version;
-    pd_blocks_csr_fill_values((const permuted_dense *const *) spd->blocks,
-                              spd->n_blocks, spd->csr_cache->p, spd->csr_cache->x);
+    pd_blocks_csr_fill_values(spd->blocks, spd->n_blocks, spd->csr_cache->p,
+                              spd->csr_cache->x);
     return spd->csr_cache;
 }
 

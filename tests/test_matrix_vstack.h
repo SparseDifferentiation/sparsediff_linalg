@@ -165,6 +165,11 @@ const char *test_vstack_skips_unchanged(void)
     exp_x[13] = -5.0;
     mu_assert("spd slice", cmp_values(C, exp_x, VS_NNZ));
 
+    /* vstack never builds the operands' CSR views */
+    mu_assert("PD csr_cache untouched",
+              ((permuted_dense *) ops[1])->csr_cache == NULL);
+    mu_assert("spd csr_cache untouched", ((stacked_pd *) ops[2])->csr_cache == NULL);
+
     free_matrix(C);
     vs_free(ops);
     return 0;
@@ -177,10 +182,7 @@ const char *test_vstack_direct_write_recopies(void)
     matrix *C = vstack_matrices_alloc(ops, VS_N_OPS);
     vstack_matrices_fill_values(ops, VS_N_OPS, C);
 
-    for (int jj = 0; jj < VS_NNZ; jj++)
-    {
-        C->x[jj] = 0.0;
-    }
+    memset(C->x, 0, VS_NNZ * sizeof(double));
     matrix_values_changed(C);
     uint64_t v = C->values_version;
 
@@ -226,22 +228,6 @@ const char *test_vstack_repeated_operand_and_n1(void)
 
     free_matrix(C1);
     free_matrix(C2);
-    vs_free(ops);
-    return 0;
-}
-
-const char *test_vstack_no_operand_cache(void)
-{
-    matrix *ops[VS_N_OPS];
-    vs_fixture(ops);
-    matrix *C = vstack_matrices_alloc(ops, VS_N_OPS);
-    vstack_matrices_fill_values(ops, VS_N_OPS, C);
-
-    mu_assert("PD csr_cache untouched",
-              ((permuted_dense *) ops[1])->csr_cache == NULL);
-    mu_assert("spd csr_cache untouched", ((stacked_pd *) ops[2])->csr_cache == NULL);
-
-    free_matrix(C);
     vs_free(ops);
     return 0;
 }

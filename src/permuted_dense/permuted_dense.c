@@ -19,6 +19,7 @@
 
 #include "internal/csr_kernels.h"
 #include "internal/permuted_dense_linalg.h"
+#include "internal/utils.h"
 #include "sparsediff_linalg/cblas_wrapper.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
@@ -78,7 +79,7 @@ static void permuted_dense_vtable_ATDA_fill_values(const matrix *self,
 }
 
 /* Forward decl; definition lower in the file. */
-static CSR_matrix *permuted_dense_to_csr_alloc(const permuted_dense *A);
+static CSR_matrix *permuted_dense_to_csr_alloc(permuted_dense *A);
 
 /* Lazy CSR_matrix view: allocate structure on first call, then return the cache.
    The cache's x array aliases pd->X (see permuted_dense_to_csr_alloc), so
@@ -437,7 +438,7 @@ matrix *new_permuted_dense_full(int m, int n, const double *data)
     return out;
 }
 
-static CSR_matrix *permuted_dense_to_csr_alloc(const permuted_dense *A)
+static CSR_matrix *permuted_dense_to_csr_alloc(permuted_dense *A)
 {
     int m0 = A->m0;
     int n0 = A->n0;
@@ -451,14 +452,14 @@ static CSR_matrix *permuted_dense_to_csr_alloc(const permuted_dense *A)
     sp_free(C->x);
     C->x = A->X;
 
-    pd_blocks_csr_pattern(&A, 1, m, 0, C->p, C->i);
+    pd_blocks_csr_pattern(&A, 1, m, C->p, C->i);
     return C;
 }
 
-void pd_blocks_csr_pattern(const permuted_dense *const *blocks, int n_blocks, int m,
-                           int nnz_base, int *Cp, int *Ci)
+void pd_blocks_csr_pattern(permuted_dense *const *blocks, int n_blocks, int m,
+                           int *Cp, int *Ci)
 {
-    /* row pointers via row lengths and then a cumulative sum from nnz_base */
+    /* row pointers via row lengths and then a cumulative sum from Cp[0] */
     memset(Cp + 1, 0, (size_t) m * sizeof(int));
     for (int k = 0; k < n_blocks; k++)
     {
@@ -468,11 +469,7 @@ void pd_blocks_csr_pattern(const permuted_dense *const *blocks, int n_blocks, in
             Cp[blk->row_perm[ii] + 1] = blk->n0;
         }
     }
-    Cp[0] = nnz_base;
-    for (int i = 0; i < m; i++)
-    {
-        Cp[i + 1] += Cp[i];
-    }
+    cumsum(Cp, m);
 
     /* column indices (each dense row contributes a copy of its col_perm) */
     for (int k = 0; k < n_blocks; k++)
@@ -487,7 +484,7 @@ void pd_blocks_csr_pattern(const permuted_dense *const *blocks, int n_blocks, in
     }
 }
 
-void pd_blocks_csr_fill_values(const permuted_dense *const *blocks, int n_blocks,
+void pd_blocks_csr_fill_values(permuted_dense *const *blocks, int n_blocks,
                                const int *Cp, double *Cx)
 {
     for (int k = 0; k < n_blocks; k++)

@@ -64,17 +64,17 @@ matrix *vstack_matrices_alloc(matrix *const *ops, int n)
     int nnz_off = 0;
     for (int k = 0; k < n; k++)
     {
-        const matrix *op = ops[k];
+        matrix *op = ops[k];
         if (op->kind == MATRIX_PERMUTED_DENSE)
         {
-            const permuted_dense *pd = (const permuted_dense *) op;
-            pd_blocks_csr_pattern(&pd, 1, op->m, nnz_off, Cp + row_off, Ci);
+            permuted_dense *pd = (permuted_dense *) op;
+            pd_blocks_csr_pattern(&pd, 1, op->m, Cp + row_off, Ci);
         }
         else if (op->kind == MATRIX_STACKED_PD)
         {
             const stacked_pd *spd = (const stacked_pd *) op;
-            pd_blocks_csr_pattern((const permuted_dense *const *) spd->blocks,
-                                  spd->n_blocks, op->m, nnz_off, Cp + row_off, Ci);
+            pd_blocks_csr_pattern(spd->blocks, spd->n_blocks, op->m, Cp + row_off,
+                                  Ci);
         }
         else
         {
@@ -94,14 +94,11 @@ matrix *vstack_matrices_alloc(matrix *const *ops, int n)
     }
     assert(row_off == C->m && Cp[row_off] == C->nnz);
 
-    /* deliberately stale, so the first fill copies every operand */
-    uint64_t *v = (uint64_t *) sp_malloc(((size_t) n + 2) * sizeof(uint64_t));
+    /* C_seen deliberately stale, so the first fill copies every operand (the
+       seen_k are then never read before the fill writes them) */
+    uint64_t *v = (uint64_t *) sp_calloc((size_t) n + 2, sizeof(uint64_t));
     v[VSTACK_N] = (uint64_t) n;
     v[VSTACK_C_SEEN] = C->values_version - 1;
-    for (int k = 0; k < n; k++)
-    {
-        v[VSTACK_SEEN + k] = ops[k]->values_version - 1;
-    }
     ((sparse_matrix *) C)->bound_vwork = v;
     return C;
 }
@@ -126,9 +123,8 @@ void vstack_matrices_fill_values(matrix *const *ops, int n, matrix *C)
             {
                 /* the spd's own buffer is block-major: scatter rows */
                 const stacked_pd *spd = (const stacked_pd *) op;
-                pd_blocks_csr_fill_values(
-                    (const permuted_dense *const *) spd->blocks, spd->n_blocks,
-                    Cp + row_off, C->x);
+                pd_blocks_csr_fill_values(spd->blocks, spd->n_blocks, Cp + row_off,
+                                          C->x);
             }
             else
             {
