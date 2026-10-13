@@ -97,11 +97,11 @@ struct matrix
     /* Monotone counter bumped whenever the matrix's values change. Consumers
        that mirror the values into a cache (CSC mirror, CSR view, ...) record
        the version they last saw and refresh iff it differs. Every library
-       fill bumps the version of the matrix it writes and refreshes any
-       operand cache it reads, so the only rule left for callers is: code
-       that writes x directly must call matrix_values_changed on the OWNER of
-       the buffer — aliased children (spd blocks, cache views) have no version
-       of their own. */
+       fill bumps the version of the matrix it writes whenever it changes its
+       values, and refreshes any operand cache it reads, so the only rule left for
+       callers is: code that writes x directly must call matrix_values_changed on the
+       OWNER of the buffer — aliased children (spd blocks, cache views) have no
+       version of their own. */
     uint64_t values_version;
 
     /* Operator ops */

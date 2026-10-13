@@ -18,6 +18,7 @@
 #include "test_linalg_utils_matmul_chain_rule.h"
 #include "test_matmul_dispatchers.h"
 #include "test_matrix.h"
+#include "test_matrix_vstack.h"
 #include "test_permuted_dense.h"
 #include "test_row_gather.h"
 #include "test_row_reduce.h"
@@ -169,6 +170,13 @@ int main(void)
     mu_run_test(test_sum_n_matrices_fill_add, tests_run);
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_sum_4_matrices_fill_no_transient_alloc, tests_run);
+#endif
+    mu_run_test(test_vstack_mixed_kinds, tests_run);
+    mu_run_test(test_vstack_skips_unchanged, tests_run);
+    mu_run_test(test_vstack_direct_write_recopies, tests_run);
+    mu_run_test(test_vstack_repeated_operand_and_n1, tests_run);
+#ifdef SP_TRACK_MEMORY
+    mu_run_test(test_vstack_fill_no_transient_alloc, tests_run);
 #endif
     mu_run_test(test_BA_sparse_matrices_pd_A, tests_run);
     mu_run_test(test_BA_sparse_matrices_spd_A, tests_run);

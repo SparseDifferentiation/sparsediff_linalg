@@ -18,7 +18,6 @@
 #include "internal/stacked_pd.h"
 
 #include "internal/stacked_pd_linalg.h"
-#include "internal/utils.h"
 #include "sparsediff_linalg/matrix.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
@@ -69,31 +68,8 @@ static void stacked_pd_vtable_transpose_fill_values(const matrix *self, matrix *
 
 static CSR_matrix *stacked_pd_to_csr_alloc(const stacked_pd *spd)
 {
-    int m = spd->base.m;
-    CSR_matrix *C = new_CSR_matrix(m, spd->base.n, spd->base.nnz);
-
-    /* fill row ptrs by first setting the length of each row and then cumsum */
-    int *Cp = C->p;
-    for (int k = 0; k < spd->n_blocks; k++)
-    {
-        permuted_dense *blk = spd->blocks[k];
-        for (int i = 0; i < blk->m0; i++)
-        {
-            Cp[blk->row_perm[i] + 1] = blk->n0;
-        }
-    }
-    cumsum(Cp, m);
-
-    /* fill column indices */
-    for (int k = 0; k < spd->n_blocks; k++)
-    {
-        permuted_dense *blk = spd->blocks[k];
-        for (int i = 0; i < blk->m0; i++)
-        {
-            int row = blk->row_perm[i];
-            memcpy(C->i + Cp[row], blk->col_perm, blk->n0 * sizeof(int));
-        }
-    }
+    CSR_matrix *C = new_CSR_matrix(spd->base.m, spd->base.n, spd->base.nnz);
+    pd_blocks_csr_pattern(spd->blocks, spd->n_blocks, spd->base.m, C->p, C->i);
     return C;
 }
 
@@ -115,17 +91,8 @@ static CSR_matrix *stacked_pd_to_csr(matrix *self)
         return spd->csr_cache;
     }
     spd->csr_seen = spd->base.values_version;
-    int *p_arr = spd->csr_cache->p;
-    for (int k = 0; k < spd->n_blocks; k++)
-    {
-        permuted_dense *blk = spd->blocks[k];
-        for (int i = 0; i < blk->m0; i++)
-        {
-            int row = blk->row_perm[i];
-            memcpy(spd->csr_cache->x + p_arr[row], blk->X + i * blk->n0,
-                   blk->n0 * sizeof(double));
-        }
-    }
+    pd_blocks_csr_fill_values(spd->blocks, spd->n_blocks, spd->csr_cache->p,
+                              spd->csr_cache->x);
     return spd->csr_cache;
 }
 

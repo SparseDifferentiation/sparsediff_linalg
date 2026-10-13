@@ -55,7 +55,7 @@ static void permuted_dense_free(matrix *self)
 
 /* Vtable adapters — each delegates to the existing permuted_dense_* kernel. */
 /* Forward decl; definition lower in the file. */
-static CSR_matrix *permuted_dense_to_csr_alloc(const permuted_dense *A);
+static CSR_matrix *permuted_dense_to_csr_alloc(permuted_dense *A);
 
 /* Lazy CSR_matrix view: allocate structure on first call, then return the cache.
    The cache's x array aliases pd->X (see permuted_dense_to_csr_alloc), so
@@ -410,7 +410,7 @@ matrix *new_permuted_dense_full(int m, int n, const double *data)
     return out;
 }
 
-static CSR_matrix *permuted_dense_to_csr_alloc(const permuted_dense *A)
+static CSR_matrix *permuted_dense_to_csr_alloc(permuted_dense *A)
 {
     int m0 = A->m0;
     int n0 = A->n0;
@@ -424,22 +424,51 @@ static CSR_matrix *permuted_dense_to_csr_alloc(const permuted_dense *A)
     sp_free(C->x);
     C->x = A->X;
 
-    /* fill column indices (each dense row contributes a copy of col_perm) */
-    for (int ii = 0; ii < m0; ii++)
-    {
-        memcpy(C->i + ii * n0, A->col_perm, n0 * sizeof(int));
-    }
-
-    /* set row pointers via count and then cumulative sum  */
-    memset(C->p, 0, (m + 1) * sizeof(int));
-    for (int ii = 0; ii < m0; ii++)
-    {
-        C->p[A->row_perm[ii] + 1] = n0;
-    }
-
-    cumsum(C->p, m);
-
+    pd_blocks_csr_pattern(&A, 1, m, C->p, C->i);
     return C;
+}
+
+void pd_blocks_csr_pattern(permuted_dense *const *blocks, int n_blocks, int m,
+                           int *Cp, int *Ci)
+{
+    /* row pointers via row lengths and then a cumulative sum from Cp[0] */
+    memset(Cp + 1, 0, (size_t) m * sizeof(int));
+    for (int k = 0; k < n_blocks; k++)
+    {
+        const permuted_dense *blk = blocks[k];
+        for (int ii = 0; ii < blk->m0; ii++)
+        {
+            Cp[blk->row_perm[ii] + 1] = blk->n0;
+        }
+    }
+    cumsum(Cp, m);
+
+    /* column indices (each dense row contributes a copy of its col_perm) */
+    for (int k = 0; k < n_blocks; k++)
+    {
+        const permuted_dense *blk = blocks[k];
+        if (blk->n0 == 0) continue;
+        for (int ii = 0; ii < blk->m0; ii++)
+        {
+            memcpy(Ci + Cp[blk->row_perm[ii]], blk->col_perm,
+                   (size_t) blk->n0 * sizeof(int));
+        }
+    }
+}
+
+void pd_blocks_csr_fill_values(permuted_dense *const *blocks, int n_blocks,
+                               const int *Cp, double *Cx)
+{
+    for (int k = 0; k < n_blocks; k++)
+    {
+        const permuted_dense *blk = blocks[k];
+        if (blk->n0 == 0) continue;
+        for (int ii = 0; ii < blk->m0; ii++)
+        {
+            memcpy(Cx + Cp[blk->row_perm[ii]], blk->X + (size_t) ii * blk->n0,
+                   (size_t) blk->n0 * sizeof(double));
+        }
+    }
 }
 
 void permuted_dense_ensure_kernel_dwork(const permuted_dense *pd_const, size_t size)

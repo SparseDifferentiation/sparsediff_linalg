@@ -42,6 +42,10 @@ typedef struct sparse_matrix
        position map for row_reduce_fill_values. NULL otherwise; never touched
        by any other kernel. */
     int *bound_iwork;
+    /* Version state bound by vstack_matrices_alloc and read and updated by
+       vstack_matrices_fill_values; NULL otherwise. Layout, see
+       matrix_vstack.c: [n | C_seen | seen_0 ... seen_{n-1}]. */
+    uint64_t *bound_vwork;
 } sparse_matrix;
 
 /* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync
