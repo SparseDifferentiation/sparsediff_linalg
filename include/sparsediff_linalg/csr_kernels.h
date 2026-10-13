@@ -18,12 +18,11 @@
 #ifndef CSR_KERNELS_H
 #define CSR_KERNELS_H
 
-#include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 
-/* Kernels on the raw CSR / CSC formats, for consumers that build sparsity
-   patterns by hand: sums with index maps, sparse products and Kronecker
-   products, and the convolution matrix. Two-phase where applicable. */
+/* Kernels on the raw CSR format, for consumers that build sparsity patterns by
+   hand: sums with index maps and the convolution matrix. Two-phase where
+   applicable. Sparse products go through the matmul.h dispatchers. */
 
 /* ---- sums ---- */
 
@@ -36,19 +35,6 @@ void sum_csr_fill_values(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C
 /* Accumulates `nnz` values from `vals` into `out` at the positions given by
    `idx_map` (length `nnz`). Caller must zero `out` before calling. */
 void accumulator(const double *vals, int nnz, const int *idx_map, double *out);
-
-/* ---- products ---- */
-
-/* Fill values of C = A @ B where A is CSR_matrix, B is CSC_matrix.
- * C must have sparsity pattern already computed.
- */
-void csr_csc_matmul_fill_values(const CSR_matrix *A, const CSC_matrix *B,
-                                CSR_matrix *C);
-
-/* C = A @ B where A is CSR_matrix, B is CSC_matrix. Result C is CSR_matrix.
- * Allocates and precomputes sparsity pattern. No workspace required.
- */
-CSR_matrix *csr_csc_matmul_alloc(const CSR_matrix *A, const CSC_matrix *B);
 
 /* ---- convolution matrix ---- */
 

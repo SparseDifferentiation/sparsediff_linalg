@@ -11,6 +11,7 @@
  */
 #include "sparsediff_linalg/matmul.h"
 
+#include "internal/csr_kernels.h"
 #include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
 #include "internal/sparse_matrix.h"
@@ -20,7 +21,6 @@
 #include "internal/stacked_pd_linalg.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/csr_kernels.h"
 #include <assert.h>
 
 /* Forward declarations of the fixed-B dispatchers used internally by
