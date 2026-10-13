@@ -21,16 +21,11 @@
 #include "sparsediff_linalg/CSR_matrix.h"
 
 /* Kernels on the raw CSR format, for consumers that build sparsity patterns by
-   hand: sums with index maps and the convolution matrix. Two-phase where
-   applicable. Sparse products go through the matmul.h dispatchers. */
+   hand: the index-map accumulator and the convolution matrix. Two-phase where
+   applicable. Sums and sparse products go through the matrix_sum.h and
+   matmul.h dispatchers. */
 
 /* ---- sums ---- */
-
-/* Compute sparsity pattern of C = A + B (and sets C->nnz) */
-void sum_csr_alloc(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);
-
-/* Fills values of C = A + B (assuming C's sparsity pattern is set) */
-void sum_csr_fill_values(const CSR_matrix *A, const CSR_matrix *B, CSR_matrix *C);
 
 /* Accumulates `nnz` values from `vals` into `out` at the positions given by
    `idx_map` (length `nnz`). Caller must zero `out` before calling. */
