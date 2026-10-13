@@ -19,6 +19,7 @@
 #include "internal/stacked_pd_kron_linalg.h"
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
+#include "sparsediff_linalg/matmul.h"
 #include "sparsediff_linalg/matrix.h"
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
@@ -156,4 +157,35 @@ void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
     csc_to_csr_fill_values(sm->csc_cache, sm->csr, sm->bound_iwork);
     matrix_values_changed(C);
     sm->csc_seen = C->values_version;
+}
+
+matrix *BA_kron_matrices_alloc(const matrix *A, int p, matrix *J)
+{
+    if (p == 1)
+    {
+        return BA_matrices_alloc(A, J);
+    }
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        return BA_dense_kron_matrices_alloc(A, p, J);
+    }
+    /* A is sparse_matrix */
+    return BA_sparse_kron_matrices_alloc(A, p, J);
+}
+
+void BA_kron_matrices_fill_values(const matrix *A, int p, matrix *J, matrix *C)
+{
+    if (p == 1)
+    {
+        BA_matrices_fill_values(A, J, C);
+    }
+    else if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        BA_dense_kron_matrices_fill_values(A, p, J, C);
+    }
+    else
+    {
+        /* A is sparse_matrix */
+        BA_sparse_kron_matrices_fill_values(A, p, J, C);
+    }
 }
