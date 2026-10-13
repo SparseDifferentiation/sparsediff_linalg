@@ -252,6 +252,106 @@ const char *test_row_reduce_spd_all_to_one(void)
     return 0;
 }
 
+/* diag_vec as a row_reduce: for an (n, k) Jacobian A of a length-n vector,
+   group[i] = i*(n+1) with m_out = n*n places row i at the i-th diagonal
+   position of vec(diag(x)) (column-major) and leaves every other row empty. */
+static void row_reduce_diag_vec_group(int n, int *group)
+{
+    for (int i = 0; i < n; i++) group[i] = i * (n + 1);
+}
+
+/* Sparse fixture (n = 4, row 2 empty) -> (16, 5) with rows 0, 5, 15 populated
+   and diagonal row 10 empty. */
+const char *test_row_reduce_diag_vec_sparse(void)
+{
+    matrix *A = row_reduce_sparse_fixture();
+    int group[4];
+    row_reduce_diag_vec_group(4, group);
+    matrix *C = A->row_reduce_alloc(A, group, 16);
+
+    int exp_p[17] = {0, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 7};
+    int exp_i[7] = {0, 3, 1, 4, 0, 2, 4};
+    mu_assert("shape", C->m == 16 && C->n == 5);
+    mu_assert("sparsity", cmp_sparsity(C, exp_p, exp_i, 16, 7));
+
+    row_reduce_poison(C);
+    A->row_reduce_fill_values(A, C);
+    double exp_x[7] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0};
+    mu_assert("values", cmp_values(C, exp_x, 7));
+
+    for (int k = 0; k < A->nnz; k++) A->x[k] *= 10.0;
+    for (int k = 0; k < 7; k++) exp_x[k] *= 10.0;
+    A->row_reduce_fill_values(A, C);
+    mu_assert("values after refill", cmp_values(C, exp_x, 7));
+
+    free_matrix(C);
+    free_matrix(A);
+    return 0;
+}
+
+/* (3, 6) pd with dense rows {0, 2} x cols {1, 4} -> (9, 6) pd: the same dense
+   block at rows {0*4, 2*4} = {0, 8}. */
+const char *test_row_reduce_diag_vec_pd(void)
+{
+    int row_perm[2] = {0, 2};
+    int col_perm[2] = {1, 4};
+    double X[4] = {1.0, 2.0, 3.0, 4.0};
+    matrix *A = new_permuted_dense(3, 6, 2, 2, row_perm, col_perm, X);
+
+    int group[3];
+    row_reduce_diag_vec_group(3, group);
+    matrix *C;
+    const char *msg = row_reduce_check_against_twin(A, group, 9, &C);
+    mu_assert(msg ? msg : "", msg == NULL);
+
+    mu_assert("kind preserved", C->kind == MATRIX_PERMUTED_DENSE);
+    permuted_dense *pd = (permuted_dense *) C;
+    mu_assert("shape", C->m == 9 && C->n == 6 && pd->m0 == 2 && pd->n0 == 2);
+    int exp_row_perm[2] = {0, 8};
+    mu_assert("row_perm", cmp_int_array(pd->row_perm, exp_row_perm, 2));
+    mu_assert("col_perm", cmp_int_array(pd->col_perm, col_perm, 2));
+    /* sources were scaled by 2 inside the twin check */
+    double exp_X[4] = {2.0, 4.0, 6.0, 8.0};
+    mu_assert("X", cmp_double_array(pd->X, exp_X, 4));
+
+    free_matrix(C);
+    free_matrix(A);
+    return 0;
+}
+
+/* (4, 4) spd, blocks rows {0, 2} x cols {0, 1} and rows {1, 3} x cols {2, 3}
+   -> (16, 4) spd with diagonal rows {0, 5, 10, 15} populated. */
+const char *test_row_reduce_diag_vec_spd(void)
+{
+    int rp0[2] = {0, 2}, cp0[2] = {0, 1};
+    double X0[4] = {1.0, 2.0, 3.0, 4.0};
+    int rp1[2] = {1, 3}, cp1[2] = {2, 3};
+    double X1[4] = {5.0, 6.0, 7.0, 8.0};
+    permuted_dense *blocks[2] = {
+        (permuted_dense *) new_permuted_dense(4, 4, 2, 2, rp0, cp0, X0),
+        (permuted_dense *) new_permuted_dense(4, 4, 2, 2, rp1, cp1, X1)};
+    matrix *A = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
+
+    int group[4];
+    row_reduce_diag_vec_group(4, group);
+    matrix *C;
+    const char *msg = row_reduce_check_against_twin(A, group, 16, &C);
+    mu_assert(msg ? msg : "", msg == NULL);
+
+    mu_assert("kind preserved", C->kind == MATRIX_STACKED_PD);
+    mu_assert("shape", C->m == 16 && C->n == 4);
+    int exp_p[17] = {0, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 8};
+    int exp_i[8] = {0, 1, 2, 3, 0, 1, 2, 3};
+    mu_assert("sparsity", cmp_sparsity(C, exp_p, exp_i, 16, 8));
+    /* sources were scaled by 2: rows 0, 5, 10, 15 = source rows 0, 1, 2, 3 */
+    double exp_x[8] = {2.0, 4.0, 10.0, 12.0, 6.0, 8.0, 14.0, 16.0};
+    mu_assert("values", cmp_double_array(C->to_csr(C)->x, exp_x, 8));
+
+    free_matrix(C);
+    free_matrix(A);
+    return 0;
+}
+
 #ifdef SP_TRACK_MEMORY
 typedef struct
 {

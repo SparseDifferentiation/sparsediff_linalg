@@ -118,10 +118,4 @@ matrix *row_reduce_pd_alloc(const permuted_dense *A, const int *group, int m_out
 /* Fill values of C = row-reduce of A, where A and C are permuted dense. */
 void row_reduce_pd_fill_values(const permuted_dense *A, permuted_dense *C);
 
-/* Allocate C = diag_vec(A), where A and C are permuted dense. */
-matrix *diag_vec_pd_alloc(const permuted_dense *A);
-
-/* Fill values of C = diag_vec(A). */
-void diag_vec_pd_fill_values(const permuted_dense *A, permuted_dense *C);
-
 #endif /* INTERNAL_PERMUTED_DENSE_H */

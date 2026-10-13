@@ -193,36 +193,6 @@ static void stacked_pd_vtable_row_gather_fill_values(const matrix *self, matrix 
     matrix_values_changed(out);
 }
 
-// -----------------------------------------------------------------------------
-//        diag_vec: C = diag(vec(A)) where A is stacked_pd
-// -----------------------------------------------------------------------------
-static matrix *stacked_pd_vtable_diag_vec_alloc(matrix *self)
-{
-    stacked_pd *A = (stacked_pd *) self;
-    permuted_dense **tmp_blocks =
-        (permuted_dense **) sp_malloc(A->n_blocks * sizeof(permuted_dense *));
-    for (int k = 0; k < A->n_blocks; k++)
-    {
-        tmp_blocks[k] = (permuted_dense *) diag_vec_pd_alloc(A->blocks[k]);
-    }
-
-    matrix *out = new_stacked_pd(A->base.m * A->base.m, A->base.n, A->n_blocks,
-                                 tmp_blocks, NULL, NULL);
-    sp_free(tmp_blocks);
-    return out;
-}
-
-static void stacked_pd_vtable_diag_vec_fill_values(matrix *self, matrix *out)
-{
-    stacked_pd *src = (stacked_pd *) self;
-    stacked_pd *out_spd = (stacked_pd *) out;
-    for (int k = 0; k < out_spd->n_blocks; k++)
-    {
-        diag_vec_pd_fill_values(src->blocks[k], out_spd->blocks[k]);
-    }
-    matrix_values_changed(out);
-}
-
 // --------------------------------------------------------------------------------
 //                          Constructor below
 // --------------------------------------------------------------------------------
@@ -277,8 +247,6 @@ static void wire_vtable(stacked_pd *spd)
     spd->base.to_csr = stacked_pd_to_csr;
     spd->base.row_gather_alloc = stacked_pd_vtable_row_gather_alloc;
     spd->base.row_gather_fill_values = stacked_pd_vtable_row_gather_fill_values;
-    spd->base.diag_vec_alloc = stacked_pd_vtable_diag_vec_alloc;
-    spd->base.diag_vec_fill_values = stacked_pd_vtable_diag_vec_fill_values;
     spd->base.row_reduce_alloc = stacked_pd_vtable_row_reduce_alloc;
     spd->base.row_reduce_fill_values = stacked_pd_vtable_row_reduce_fill_values;
 }
