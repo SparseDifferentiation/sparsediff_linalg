@@ -81,6 +81,21 @@ struct permuted_dense
    place; contents are NOT preserved. */
 void permuted_dense_ensure_kernel_dwork(const permuted_dense *A, size_t size);
 
+/* CSR layout of a union of PD blocks with disjoint row_perms (a single PD, or
+   the blocks of a stacked_pd) in an m-row matrix. Shared by the to_csr views
+   and vstack_matrices, which writes into a row slice of a larger CSR. */
+
+/* Write the row pointers Cp[1..m] and the column indices at their absolute
+   positions Ci[Cp[row]..]. Cp[0] must hold the base offset on entry (0 for a
+   standalone CSR). */
+void pd_blocks_csr_pattern(permuted_dense *const *blocks, int n_blocks, int m,
+                           int *Cp, int *Ci);
+
+/* Scatter the blocks' rows of X into Cx at the absolute row starts Cp[row]
+   written by pd_blocks_csr_pattern. */
+void pd_blocks_csr_fill_values(permuted_dense *const *blocks, int n_blocks,
+                               const int *Cp, double *Cx);
+
 /* Raw per-kind kernels. They are also used blockwise by stacked_pd, whose
    blocks carry no values_version of their own, so unlike the vtable fills
    these fills do NOT bump C's values_version; the caller owning C does. */

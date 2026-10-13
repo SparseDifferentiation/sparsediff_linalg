@@ -42,6 +42,7 @@ static void sparse_free(matrix *self)
     free_CSC_matrix(sm->csc_cache);
     sp_free(sm->csc_iwork);
     sp_free(sm->bound_iwork);
+    sp_free(sm->bound_vwork);
     free_CSC_matrix(sm->bound_csc);
     sp_free(sm);
 }
