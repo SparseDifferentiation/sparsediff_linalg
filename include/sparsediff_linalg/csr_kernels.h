@@ -21,25 +21,13 @@
 #include "sparsediff_linalg/CSR_matrix.h"
 
 /* Kernels on the raw CSR format, for consumers that build sparsity patterns by
-   hand: the index-map accumulator and the convolution matrix. Two-phase where
-   applicable. Sums and sparse products go through the matrix_sum.h and
-   matmul.h dispatchers. */
+   hand: the index-map accumulator. Sums and sparse products go through the
+   matrix_sum.h and matmul.h dispatchers. */
 
 /* ---- sums ---- */
 
 /* Accumulates `nnz` values from `vals` into `out` at the positions given by
    `idx_map` (length `nnz`). Caller must zero `out` before calling. */
 void accumulator(const double *vals, int nnz, const int *idx_map, double *out);
-
-/* ---- convolution matrix ---- */
-
-/* Fill T_csr's row pointers and column indices for the 1D full-convolution
-   Toeplitz matrix T(a), sized (m+n-1) x n with m*n nonzeros. Values (x) are
-   not written; call conv_matrix_fill_values to populate them. */
-void conv_matrix_fill_sparsity(CSR_matrix *T_csr, int m, int n);
-
-/* Overwrite T_csr->x from kernel a, using the sparsity already written by
-   conv_matrix_fill_sparsity. T[r, col] = a[r - col]. */
-void conv_matrix_fill_values(CSR_matrix *T_csr, const double *a);
 
 #endif /* CSR_KERNELS_H */
