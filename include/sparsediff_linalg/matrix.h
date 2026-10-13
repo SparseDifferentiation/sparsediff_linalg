@@ -55,13 +55,6 @@ typedef CSC_matrix *(*matrix_block_left_mult_sparsity_fn)(const matrix *A,
 typedef void (*matrix_block_left_mult_values_fn)(const matrix *A,
                                                  const CSC_matrix *J, CSC_matrix *C);
 
-/* Allocate C = AT @ A */
-typedef matrix *(*matrix_ATA_alloc_fn)(matrix *A);
-
-/* Fill values of C = AT @ diag(d) @ A */
-typedef void (*matrix_ATDA_fill_values_fn)(const matrix *A, const double *d,
-                                           matrix *C);
-
 /* Allocate AT = transpose(A) */
 typedef matrix *(*matrix_transpose_alloc_fn)(const matrix *A);
 
@@ -117,8 +110,6 @@ struct matrix
     matrix_block_left_mult_values_fn block_left_mult_values;
 
     /* Chain-rule ops */
-    matrix_ATA_alloc_fn ATA_alloc;
-    matrix_ATDA_fill_values_fn ATDA_fill_values;
     matrix_transpose_alloc_fn transpose_alloc;
     matrix_transpose_fill_values_fn transpose_fill_values;
 

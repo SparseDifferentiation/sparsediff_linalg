@@ -146,10 +146,10 @@ matrix *BA_spd_spd_alloc(const stacked_pd *B, const stacked_pd *A);
  * production. */
 void BA_spd_spd_fill_values(const stacked_pd *B, const stacked_pd *A, stacked_pd *C);
 
-/* Allocate sparsity for a new stacked_pd C = A^T A. Not used in production. */
+/* Allocate sparsity for a new stacked_pd C = A^T A. */
 matrix *ATA_spd_alloc(const stacked_pd *A);
 
-/* Fill values of C = A^T diag(d) A. Not used in production. */
+/* Fill values of C = A^T diag(d) A. */
 void ATDA_spd_fill_values(const stacked_pd *A, const double *d, stacked_pd *C);
 
 #endif /* STACKED_PD_LINALG_H */

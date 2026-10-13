@@ -279,17 +279,17 @@ const char *test_fill_refreshes_sparse_operand_kron(void)
     return 0;
 }
 
-/* Sparse vtable path: C = A^T diag(d) A reads A's CSC mirror. */
+/* Sparse path: C = A^T diag(d) A reads A's CSC mirror. */
 const char *test_fill_refreshes_sparse_operand_ATDA(void)
 {
     matrix *A = cc_make_A(CC_SPARSE);
-    matrix *C = A->ATA_alloc(A);
+    matrix *C = ATA_matrices_alloc(A);
     double d[6] = {1.0, 2.0, -1.0, 0.5, 4.0, -3.0};
     double Ad[24], Cd[16], Cref[16];
     for (int pass = 0; pass < 2; pass++)
     {
         if (pass == 1) cc_scale(A, 1.5);
-        A->ATDA_fill_values(A, d, C);
+        ATDA_matrices_fill_values(A, d, C);
         cc_to_dense(A, Ad);
         cc_dense_BTDA(Ad, d, Ad, 6, 4, 4, Cref);
         cc_to_dense(C, Cd);
@@ -298,6 +298,48 @@ const char *test_fill_refreshes_sparse_operand_ATDA(void)
     }
     free_matrix(C);
     free_matrix(A);
+    return 0;
+}
+
+/* The dedicated ATA dispatchers agree with the general BTA ones on B == A, for
+   every kind: same output kind and nnz, same (symmetric) values. */
+static const char *cc_check_ATA_matches_BTA(enum cc_kind kind)
+{
+    matrix *A = cc_make_A(kind);
+    double d[6] = {1.0, 2.0, -1.0, 0.5, 4.0, -3.0};
+    double C1d[16], C2d[16];
+    const char *err = 0;
+
+    matrix *C1 = ATA_matrices_alloc(A);
+    matrix *C2 = BTA_matrices_alloc(A, A);
+    if (C1->kind != C2->kind || C1->kind != A->kind) err = "ATA output kind";
+    if (!err && C1->nnz != C2->nnz) err = "ATA nnz differs from BTA";
+    if (!err)
+    {
+        ATDA_matrices_fill_values(A, d, C1);
+        BTDA_matrices_fill_values(A, d, A, C2);
+        cc_to_dense(C1, C1d);
+        cc_to_dense(C2, C2d);
+        if (!cc_dense_eq(C1d, C2d, 16)) err = "ATDA values differ from BTDA";
+        double C1t[16];
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++) C1t[j * 4 + i] = C1d[i * 4 + j];
+        if (!err && !cc_dense_eq(C1d, C1t, 16)) err = "ATDA not symmetric";
+    }
+    free_matrix(C2);
+    free_matrix(C1);
+    free_matrix(A);
+    return err;
+}
+
+const char *test_ATA_matrices_matches_BTA(void)
+{
+    const enum cc_kind kinds[3] = {CC_SPARSE, CC_PD, CC_SPD};
+    for (int k = 0; k < 3; k++)
+    {
+        const char *err = cc_check_ATA_matches_BTA(kinds[k]);
+        mu_assert(err ? err : "", err == 0);
+    }
     return 0;
 }
 
@@ -323,10 +365,10 @@ static const char *cc_check_vtable_bumps(enum cc_kind kind)
     if (!cc_bumped_once(DA, v)) err = "DA_matrices_fill_values";
     free_matrix(DA);
 
-    matrix *ATA = A->ATA_alloc(A);
+    matrix *ATA = ATA_matrices_alloc(A);
     v = ATA->values_version;
-    A->ATDA_fill_values(A, d, ATA);
-    if (!err && !cc_bumped_once(ATA, v)) err = "ATDA_fill_values";
+    ATDA_matrices_fill_values(A, d, ATA);
+    if (!err && !cc_bumped_once(ATA, v)) err = "ATDA_matrices_fill_values";
     free_matrix(ATA);
 
     matrix *AT = A->transpose_alloc(A);

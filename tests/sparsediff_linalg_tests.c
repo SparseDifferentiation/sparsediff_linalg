@@ -214,8 +214,8 @@ int main(void)
     mu_run_test(test_BA_pd_spd_alloc_then_fill_values, tests_run);
     mu_run_test(test_spd_copy_sparsity, tests_run);
     mu_run_test(test_spd_DA_fill_values, tests_run);
-    mu_run_test(test_spd_vtable_ATA_alloc, tests_run);
-    mu_run_test(test_spd_vtable_ATDA_fill_values, tests_run);
+    mu_run_test(test_spd_ATA_alloc, tests_run);
+    mu_run_test(test_spd_ATDA_fill_values, tests_run);
     mu_run_test(test_spd_vtable_transpose, tests_run);
     mu_run_test(test_spd_vtable_row_gather, tests_run);
     mu_run_test(test_spd_vtable_diag_vec, tests_run);
@@ -231,6 +231,7 @@ int main(void)
     mu_run_test(test_fill_refreshes_sparse_operand_BA_pd, tests_run);
     mu_run_test(test_fill_refreshes_sparse_operand_kron, tests_run);
     mu_run_test(test_fill_refreshes_sparse_operand_ATDA, tests_run);
+    mu_run_test(test_ATA_matrices_matches_BTA, tests_run);
     mu_run_test(test_public_fills_bump_output, tests_run);
 
     printf("\n--- Legacy oracle tests ---\n");

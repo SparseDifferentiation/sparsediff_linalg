@@ -7,6 +7,7 @@
 #include "internal/stacked_pd_linalg.h"
 #include "minunit.h"
 #include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/matmul.h"
 #include "sparsediff_linalg/matrix.h"
 #include "test_helpers.h"
 #include <stdlib.h>
@@ -1212,8 +1213,8 @@ const char *test_spd_DA_fill_values(void)
     return 0;
 }
 
-/* Vtable: ATA_alloc through A->ATA_alloc(A). */
-const char *test_spd_vtable_ATA_alloc(void)
+/* ATA_matrices_alloc on a stacked_pd. */
+const char *test_spd_ATA_alloc(void)
 {
     int row_perm_0[2] = {0, 1};
     int col_perm_0[2] = {0, 1};
@@ -1228,7 +1229,7 @@ const char *test_spd_vtable_ATA_alloc(void)
     permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
     matrix *A_m = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
 
-    matrix *C_m = A_m->ATA_alloc(A_m);
+    matrix *C_m = ATA_matrices_alloc(A_m);
     stacked_pd *C = (stacked_pd *) C_m;
 
     mu_assert("n_blocks", C->n_blocks == 2);
@@ -1240,8 +1241,8 @@ const char *test_spd_vtable_ATA_alloc(void)
     return 0;
 }
 
-/* Vtable: ATDA_fill_values through A->ATDA_fill_values(A, d, C). */
-const char *test_spd_vtable_ATDA_fill_values(void)
+/* ATDA_matrices_fill_values on a stacked_pd. */
+const char *test_spd_ATDA_fill_values(void)
 {
     int row_perm_0[2] = {0, 1};
     int col_perm_0[2] = {0, 1};
@@ -1258,8 +1259,8 @@ const char *test_spd_vtable_ATDA_fill_values(void)
 
     double d[4] = {1.0, 2.0, 3.0, 4.0};
 
-    matrix *C_m = A_m->ATA_alloc(A_m);
-    A_m->ATDA_fill_values(A_m, d, C_m);
+    matrix *C_m = ATA_matrices_alloc(A_m);
+    ATDA_matrices_fill_values(A_m, d, C_m);
     stacked_pd *C = (stacked_pd *) C_m;
 
     /* Same expected values as test_ATDA_spd_disjoint_cols. */
