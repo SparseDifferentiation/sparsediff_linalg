@@ -56,4 +56,7 @@ typedef struct sparse_matrix
    the base's cached x pointer and nnz, since realloc may move the buffer. */
 void sparse_matrix_trim(matrix *M);
 
+/* Destructor of the sparse kind; free_matrix dispatches to it. */
+void sparse_matrix_free(matrix *self);
+
 #endif /* INTERNAL_SPARSE_MATRIX_H */

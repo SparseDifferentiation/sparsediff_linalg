@@ -61,8 +61,6 @@ typedef matrix *(*matrix_row_reduce_alloc_fn)(const matrix *A, const int *group,
 /* Fill values of C = row-reduce of A. */
 typedef void (*matrix_row_reduce_fill_values_fn)(const matrix *A, matrix *C);
 
-typedef void (*matrix_free_fn)(matrix *self);
-
 struct matrix
 {
     int m, n, nnz;
@@ -87,9 +85,6 @@ struct matrix
     matrix_row_gather_fill_values_fn row_gather_fill_values;
     matrix_row_reduce_alloc_fn row_reduce_alloc;
     matrix_row_reduce_fill_values_fn row_reduce_fill_values;
-
-    /* Lifecycle */
-    matrix_free_fn free_fn;
 };
 
 /* Notify the library after writing A->x directly. */
@@ -98,22 +93,12 @@ static inline void matrix_values_changed(matrix *A)
     A->values_version++;
 }
 
-/* Free helper */
-static inline void free_matrix(matrix *m)
-{
-    if (m)
-    {
-        m->free_fn(m);
-    }
-}
+/* Free a matrix of any kind; NULL is a no-op. */
+void free_matrix(matrix *m);
 
 /* Allocate a new matrix with the same kind and sparsity as A. Values are
    uninitialized. */
 matrix *copy_sparsity_matrices_alloc(const matrix *A);
-
-/* Fill values of C = diag(d) @ A, where len(d) = A->m. C must have been
-   allocated by copy_sparsity_matrices_alloc(A). Bumps C's values_version. */
-void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C);
 
 /* Allocate AT = transpose(A), of A's kind. Values are uninitialized. */
 matrix *transpose_matrices_alloc(const matrix *A);

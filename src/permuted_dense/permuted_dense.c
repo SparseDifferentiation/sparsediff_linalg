@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void permuted_dense_free(matrix *self)
+void permuted_dense_free(matrix *self)
 {
     permuted_dense *pd = (permuted_dense *) self;
     sp_free(pd->row_perm);
@@ -224,7 +224,6 @@ static void permuted_dense_vtable_row_reduce_fill_values(const matrix *self,
 static void wire_vtable(permuted_dense *pd)
 {
     pd->base.kind = MATRIX_PERMUTED_DENSE;
-    pd->base.free_fn = permuted_dense_free;
     pd->base.to_csr = permuted_dense_to_csr;
     pd->base.row_gather_alloc = permuted_dense_vtable_row_gather_alloc;
     pd->base.row_gather_fill_values = permuted_dense_vtable_row_gather_fill_values;

@@ -81,6 +81,9 @@ struct permuted_dense
    place; contents are NOT preserved. */
 void permuted_dense_ensure_kernel_dwork(const permuted_dense *A, size_t size);
 
+/* Destructor of the permuted_dense kind; free_matrix dispatches to it. */
+void permuted_dense_free(matrix *self);
+
 /* CSR layout of a union of PD blocks with disjoint row_perms (a single PD, or
    the blocks of a stacked_pd) in an m-row matrix. Shared by the to_csr views
    and vstack_matrices, which writes into a row slice of a larger CSR. */

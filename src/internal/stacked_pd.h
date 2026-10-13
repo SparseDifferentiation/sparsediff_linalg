@@ -53,6 +53,9 @@ typedef struct stacked_pd
     permuted_dense *kernel_pd_scratch;
 } stacked_pd;
 
+/* Destructor of the stacked_pd kind; free_matrix dispatches to it. */
+void stacked_pd_free(matrix *self);
+
 /* Same as new_stacked_pd but skips a pairwise-disjoint row_permutation check in
    debug mode. Use only when the input intentionally has blocks with overlapping
    row permutations. */

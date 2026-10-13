@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void sparse_free(matrix *self)
+void sparse_matrix_free(matrix *self)
 {
     sparse_matrix *sm = (sparse_matrix *) self;
     free_CSR_matrix(sm->csr);
@@ -247,7 +247,6 @@ static void wire_vtable(sparse_matrix *sm)
     sm->base.row_gather_fill_values = sparse_row_gather_fill_values;
     sm->base.row_reduce_alloc = sparse_row_reduce_alloc;
     sm->base.row_reduce_fill_values = sparse_row_reduce_fill_values;
-    sm->base.free_fn = sparse_free;
 }
 
 matrix *new_sparse_matrix(CSR_matrix *A)

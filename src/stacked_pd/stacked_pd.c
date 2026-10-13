@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void stacked_pd_free(matrix *self)
+void stacked_pd_free(matrix *self)
 {
     stacked_pd *spd = (stacked_pd *) self;
     for (int k = 0; k < spd->n_blocks; k++)
@@ -243,7 +243,6 @@ static void stacked_pd_vtable_row_reduce_fill_values(const matrix *self, matrix 
 static void wire_vtable(stacked_pd *spd)
 {
     spd->base.kind = MATRIX_STACKED_PD;
-    spd->base.free_fn = stacked_pd_free;
     spd->base.to_csr = stacked_pd_to_csr;
     spd->base.row_gather_alloc = stacked_pd_vtable_row_gather_alloc;
     spd->base.row_gather_fill_values = stacked_pd_vtable_row_gather_fill_values;

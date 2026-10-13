@@ -396,6 +396,24 @@ static void BTA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix
     BTDA_fill_values(sparse_csc_fresh(A), B_csc, NULL, ((sparse_matrix *) C)->csr);
 }
 
+void free_matrix(matrix *m)
+{
+    if (m == NULL) return;
+    if (m->kind == MATRIX_PERMUTED_DENSE)
+    {
+        permuted_dense_free(m);
+    }
+    else if (m->kind == MATRIX_STACKED_PD)
+    {
+        stacked_pd_free(m);
+    }
+    else
+    {
+        /* m is sparse_matrix */
+        sparse_matrix_free(m);
+    }
+}
+
 matrix *copy_sparsity_matrices_alloc(const matrix *A)
 {
     if (A->kind == MATRIX_PERMUTED_DENSE)
