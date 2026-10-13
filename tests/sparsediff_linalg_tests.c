@@ -164,6 +164,9 @@ int main(void)
     mu_run_test(test_BTA_matrices_fill_csc_pd, tests_run);
     mu_run_test(test_BTA_matrices_fill_csc_csc, tests_run);
     mu_run_test(test_BA_pd_kron_spd_no_cache_staleness, tests_run);
+    mu_run_test(test_BA_kron_dispatch_sparse, tests_run);
+    mu_run_test(test_BA_kron_dispatch_dense, tests_run);
+    mu_run_test(test_BA_kron_dispatch_p1, tests_run);
     mu_run_test(test_BA_pd_spd_transpose_cache_refresh, tests_run);
     mu_run_test(test_BTA_pd_csc_transpose_cache_refresh, tests_run);
     mu_run_test(test_sum_4_matrices_mixed_kinds, tests_run);

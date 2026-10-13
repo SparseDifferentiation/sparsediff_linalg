@@ -2296,6 +2296,143 @@ const char *test_BA_pd_kron_spd_no_cache_staleness(void)
     return 0;
 }
 
+/* BA_kron_matrices_* dispatch: run the dispatcher and the direct function it
+   should route to on the same (A, p, J), compare kind and values (via to_csr),
+   then change J's values and check the second fill bumps C and still matches. */
+static matrix *kron_J(int m, int n)
+{
+    /* m x n sparse J, two nonzeros per row */
+    CSR_matrix *J = new_CSR_matrix(m, n, 2 * m);
+    for (int i = 0; i < m; i++)
+    {
+        J->p[i] = 2 * i;
+        J->i[2 * i] = i % n;
+        J->i[2 * i + 1] = (i % n + 1 + i % (n - 1)) % n;
+        if (J->i[2 * i + 1] < J->i[2 * i])
+        {
+            int t = J->i[2 * i];
+            J->i[2 * i] = J->i[2 * i + 1];
+            J->i[2 * i + 1] = t;
+        }
+        J->x[2 * i] = 1.0 + i;
+        J->x[2 * i + 1] = -0.5 * i + 2.0;
+    }
+    J->p[m] = 2 * m;
+    return new_sparse_matrix(J);
+}
+
+static int kron_same(matrix *C, matrix *R)
+{
+    if (C->kind != R->kind) return 0;
+    CSR_matrix *c = C->to_csr(C);
+    CSR_matrix *r = R->to_csr(R);
+    return c->m == r->m && c->n == r->n && c->nnz == r->nnz &&
+           cmp_int_array(c->p, r->p, c->m + 1) &&
+           cmp_int_array(c->i, r->i, c->nnz) && cmp_double_array(c->x, r->x, c->nnz);
+}
+
+typedef matrix *(*kron_alloc_fn)(const matrix *A, int p, matrix *J);
+typedef void (*kron_fill_fn)(const matrix *A, int p, matrix *J, matrix *C);
+
+static const char *check_kron_dispatch(matrix *A, int p, kron_alloc_fn ref_alloc,
+                                       kron_fill_fn ref_fill)
+{
+    const char *err = NULL;
+    matrix *J = kron_J(p * A->n, 4);
+    matrix *C = BA_kron_matrices_alloc(A, p, J);
+    matrix *R = ref_alloc(A, p, J);
+    BA_kron_matrices_fill_values(A, p, J, C);
+    ref_fill(A, p, J, R);
+    if (!kron_same(C, R)) err = "first fill differs from the direct function";
+
+    for (int k = 0; k < J->nnz; k++)
+    {
+        J->x[k] = 3.0 - 0.25 * k;
+    }
+    matrix_values_changed(J);
+    uint64_t v = C->values_version;
+    BA_kron_matrices_fill_values(A, p, J, C);
+    ref_fill(A, p, J, R);
+    if (!err && C->values_version == v) err = "second fill did not bump C";
+    if (!err && !kron_same(C, R))
+        err = "second fill differs from the direct function";
+
+    free_matrix(R);
+    free_matrix(C);
+    free_matrix(J);
+    return err;
+}
+
+/* p == 1 references: BA_matrices_* with the (A, p, J) signature */
+static matrix *ba_alloc_p1(const matrix *A, int p, matrix *J)
+{
+    (void) p;
+    return BA_matrices_alloc(A, J);
+}
+
+static void ba_fill_p1(const matrix *A, int p, matrix *J, matrix *C)
+{
+    (void) p;
+    BA_matrices_fill_values(A, J, C);
+}
+
+static void dense_kron_fill(const matrix *A, int p, matrix *J, matrix *C)
+{
+    BA_dense_kron_matrices_fill_values(A, p, J, C);
+}
+
+static matrix *kron_A_dense(void)
+{
+    double X[6] = {1, -2, 0.5, 3, 4, -1};
+    return new_permuted_dense_full(2, 3, X);
+}
+
+static matrix *kron_A_sparse(void)
+{
+    CSR_matrix *A = new_CSR_matrix(2, 3, 3);
+    int Ap[3] = {0, 2, 3};
+    int Ai[3] = {0, 2, 1};
+    double Ax[3] = {2, -1, 5};
+    memcpy(A->p, Ap, sizeof(Ap));
+    memcpy(A->i, Ai, sizeof(Ai));
+    memcpy(A->x, Ax, sizeof(Ax));
+    return new_sparse_matrix(A);
+}
+
+const char *test_BA_kron_dispatch_sparse(void)
+{
+    matrix *A = kron_A_sparse();
+    const char *err = check_kron_dispatch(A, 3, BA_sparse_kron_matrices_alloc,
+                                          BA_sparse_kron_matrices_fill_values);
+    free_matrix(A);
+    mu_assert(err, err == NULL);
+    return 0;
+}
+
+const char *test_BA_kron_dispatch_dense(void)
+{
+    matrix *A = kron_A_dense();
+    const char *err =
+        check_kron_dispatch(A, 3, BA_dense_kron_matrices_alloc, dense_kron_fill);
+    free_matrix(A);
+    mu_assert(err, err == NULL);
+    return 0;
+}
+
+const char *test_BA_kron_dispatch_p1(void)
+{
+    matrix *A = kron_A_dense();
+    const char *err = check_kron_dispatch(A, 1, ba_alloc_p1, ba_fill_p1);
+    free_matrix(A);
+    mu_assert(err, err == NULL);
+
+    A = kron_A_sparse();
+    err = check_kron_dispatch(A, 1, ba_alloc_p1, ba_fill_p1);
+    free_matrix(A);
+    mu_assert(err, err == NULL);
+    return 0;
+}
+
 /* Only compiled with -DSP_TRACK_MEMORY=ON: the test reads the tracked
    allocator counters, which do not exist in a default build. */
 #ifdef SP_TRACK_MEMORY

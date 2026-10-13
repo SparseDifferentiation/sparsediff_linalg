@@ -56,4 +56,13 @@ matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J);
 void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
                                          matrix *C);
 
+/* Dispatcher for C = kron(I_p, A) @ J, where A is a full permuted_dense or a
+   sparse_matrix (stacked_pd asserts) and J is any kind:
+     - p == 1         -> BA_matrices_* (output kind as documented there).
+     - A is full PD   -> BA_dense_kron_matrices_* (output is stacked_pd).
+     - A is sparse    -> BA_sparse_kron_matrices_* (output is sparse_matrix).
+   The fill bumps C's values_version. */
+matrix *BA_kron_matrices_alloc(const matrix *A, int p, matrix *J);
+void BA_kron_matrices_fill_values(const matrix *A, int p, matrix *J, matrix *C);
+
 #endif /* MATMUL_KRON_H */
