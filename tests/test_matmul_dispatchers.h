@@ -2712,6 +2712,128 @@ const char *test_sum_4_matrices_mixed_kinds(void)
     return 0;
 }
 
+/* sum_n_matrices with n = 4 on the sum_4 fixture: same pattern and values as
+   sum_4_matrices, and both match a dense reference before and after mutating
+   an operand's values. */
+const char *test_sum_n_matrices_mixed_kinds(void)
+{
+    matrix *A, *B, *D, *E;
+    s4_fixture(&A, &B, &D, &E);
+    matrix *ops[4] = {A, B, D, E};
+
+    matrix *C = sum_n_matrices_alloc(ops, 4);
+    matrix *C4 = sum_4_matrices_alloc(A, B, D, E);
+    mu_assert("C is sparse", C->kind == MATRIX_SPARSE);
+    mu_assert("C shape", C->m == 6 && C->n == 5);
+    CSR_matrix *csr = C->to_csr(C);
+    CSR_matrix *csr4 = C4->to_csr(C4);
+    mu_assert("C pattern valid", csr_is_valid(csr));
+    mu_assert("nnz matches sum_4", csr->nnz == csr4->nnz);
+    mu_assert("p matches sum_4", cmp_int_array(csr->p, csr4->p, 7));
+    mu_assert("i matches sum_4", cmp_int_array(csr->i, csr4->i, csr->nnz));
+
+    for (int round = 0; round < 2; round++)
+    {
+        if (round == 1)
+        {
+            for (int ii = 0; ii < D->nnz; ii++) D->x[ii] = -D->x[ii];
+            matrix_values_changed(D);
+            for (int ii = 0; ii < B->nnz; ii++) B->x[ii] *= 0.5;
+            matrix_values_changed(B);
+        }
+        sum_n_matrices_fill_values(ops, 4, C);
+        sum_4_matrices_fill_values(A, B, D, E, C4);
+        mu_assert("values match sum_4", cmp_double_array(C->x, C4->x, C->nnz));
+
+        double *ref = dense_of(A);
+        double *dB = dense_of(B);
+        double *dD = dense_of(D);
+        double *dE = dense_of(E);
+        double *got = dense_of(C);
+        for (int k = 0; k < 30; k++) ref[k] += dB[k] + dD[k] + dE[k];
+        mu_assert("sum matches dense reference", cmp_double_array(got, ref, 30));
+        sp_free(ref);
+        sp_free(dB);
+        sp_free(dD);
+        sp_free(dE);
+        sp_free(got);
+    }
+
+    free_matrix(C4);
+    free_matrix(C);
+    free_matrix(E);
+    free_matrix(D);
+    free_matrix(B);
+    free_matrix(A);
+    return 0;
+}
+
+static matrix *sn_sparse(int m, int n, int nnz, const int *p, const int *i,
+                         const double *x)
+{
+    CSR_matrix *csr = new_CSR_matrix(m, n, nnz);
+    memcpy(csr->p, p, (size_t) (m + 1) * sizeof(int));
+    memcpy(csr->i, i, (size_t) nnz * sizeof(int));
+    memcpy(csr->x, x, (size_t) nnz * sizeof(double));
+    return new_sparse_matrix(csr);
+}
+
+/* sum_n_matrices at n = 1 (C copies the operand) and n = 5 (4x6 sparse
+   operands whose columns interleave across operands, one passed twice, one
+   empty, and a row empty in all of them) against a dense reference. */
+const char *test_sum_n_matrices_n1_n5(void)
+{
+    int p0[5] = {0, 2, 3, 3, 4};
+    int i0[4] = {1, 5, 2, 0};
+    double x0[4] = {1, 2, 3, 4};
+    int p1[5] = {0, 1, 3, 3, 3};
+    int i1[3] = {0, 2, 4};
+    double x1[3] = {5, 6, 7};
+    int p4[5] = {0, 1, 1, 1, 3};
+    int i4[3] = {5, 1, 5};
+    double x4[3] = {8, 9, 10};
+    matrix *M0 = sn_sparse(4, 6, 4, p0, i0, x0);
+    matrix *M1 = sn_sparse(4, 6, 3, p1, i1, x1);
+    matrix *Me = new_sparse_matrix_alloc(4, 6, 0);
+    memset(Me->to_csr(Me)->p, 0, 5 * sizeof(int));
+    matrix *M4 = sn_sparse(4, 6, 3, p4, i4, x4);
+
+    /* n = 1 */
+    matrix *ops1[1] = {M0};
+    matrix *C1 = sum_n_matrices_alloc(ops1, 1);
+    sum_n_matrices_fill_values(ops1, 1, C1);
+    mu_assert("n=1 pattern", cmp_sparsity(C1, p0, i0, 4, 4));
+    mu_assert("n=1 values", cmp_values(C1, x0, 4));
+
+    /* n = 5 */
+    matrix *ops5[5] = {M0, M1, M0, Me, M4};
+    matrix *C5 = sum_n_matrices_alloc(ops5, 5);
+    sum_n_matrices_fill_values(ops5, 5, C5);
+    mu_assert("n=5 pattern valid", csr_is_valid(C5->to_csr(C5)));
+    int exp_p[5] = {0, 3, 5, 5, 8};
+    int exp_i[8] = {0, 1, 5, 2, 4, 0, 1, 5};
+    mu_assert("n=5 pattern", cmp_sparsity(C5, exp_p, exp_i, 4, 8));
+    double *ref = (double *) sp_calloc(24, sizeof(double));
+    for (int k = 0; k < 5; k++)
+    {
+        double *d = dense_of(ops5[k]);
+        for (int c = 0; c < 24; c++) ref[c] += d[c];
+        sp_free(d);
+    }
+    double *got = dense_of(C5);
+    mu_assert("n=5 matches dense reference", cmp_double_array(got, ref, 24));
+    sp_free(got);
+    sp_free(ref);
+
+    free_matrix(C5);
+    free_matrix(C1);
+    free_matrix(M4);
+    free_matrix(Me);
+    free_matrix(M1);
+    free_matrix(M0);
+    return 0;
+}
+
 #ifdef SP_TRACK_MEMORY
 typedef struct
 {

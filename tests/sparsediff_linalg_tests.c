@@ -164,6 +164,8 @@ int main(void)
     mu_run_test(test_BA_pd_spd_transpose_cache_refresh, tests_run);
     mu_run_test(test_BTA_pd_csc_transpose_cache_refresh, tests_run);
     mu_run_test(test_sum_4_matrices_mixed_kinds, tests_run);
+    mu_run_test(test_sum_n_matrices_mixed_kinds, tests_run);
+    mu_run_test(test_sum_n_matrices_n1_n5, tests_run);
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_sum_4_matrices_fill_no_transient_alloc, tests_run);
 #endif

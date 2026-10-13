@@ -37,4 +37,12 @@ matrix *sum_4_matrices_alloc(matrix *A, matrix *B, matrix *D, matrix *E);
 void sum_4_matrices_fill_values(const matrix *A, const matrix *B, const matrix *D,
                                 const matrix *E, matrix *C);
 
+/* Fill sparsity of C = ops[0] + ... + ops[n-1] (n >= 1, any kinds, same shape).
+   Uses CSR matrices internally; C is a sparse_matrix. */
+matrix *sum_n_matrices_alloc(matrix *const *ops, int n);
+
+/* Fill values of C = ops[0] + ... + ops[n-1], with ops as passed to the alloc.
+   Uses CSR matrices internally. */
+void sum_n_matrices_fill_values(matrix *const *ops, int n, matrix *C);
+
 #endif /* MATRIX_SUM_H */

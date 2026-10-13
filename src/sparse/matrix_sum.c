@@ -96,3 +96,60 @@ void sum_4_matrices_fill_values(const matrix *A, const matrix *B, const matrix *
     accumulator(E->x, E->nnz, map, C->x);
     matrix_values_changed(C);
 }
+
+matrix *sum_n_matrices_alloc(matrix *const *ops, int n)
+{
+    assert(n >= 1);
+    const CSR_matrix **csrs =
+        (const CSR_matrix **) sp_malloc((size_t) n * sizeof(CSR_matrix *));
+    int **maps = (int **) sp_malloc((size_t) n * sizeof(int *));
+    for (int k = 0; k < n; k++)
+    {
+        csrs[k] = ops[k]->to_csr(ops[k]);
+    }
+    CSR_matrix *csr = sum_n_csr_alloc(csrs, n, maps);
+
+    /* The maps index the operands in CSR order. A stacked_pd's own value buffer
+       is block-major, so re-index its map to read op->x directly at fill time. */
+    size_t total = 0;
+    for (int k = 0; k < n; k++)
+    {
+        if (ops[k]->kind == MATRIX_STACKED_PD)
+        {
+            compose_csr_idx_map_for_spd(ops[k], csrs[k], maps[k]);
+        }
+        total += (size_t) ops[k]->nnz;
+    }
+
+    /* bind the maps back to back inside the output; the fill splits them by
+       operand nnz */
+    int *all = (int *) sp_malloc((total > 0 ? total : 1) * sizeof(int));
+    size_t off = 0;
+    for (int k = 0; k < n; k++)
+    {
+        memcpy(all + off, maps[k], (size_t) ops[k]->nnz * sizeof(int));
+        off += (size_t) ops[k]->nnz;
+        sp_free(maps[k]);
+    }
+    sp_free(maps);
+    sp_free(csrs);
+
+    sparse_matrix *out = (sparse_matrix *) new_sparse_matrix(csr);
+    out->bound_iwork = all;
+    return &out->base;
+}
+
+void sum_n_matrices_fill_values(matrix *const *ops, int n, matrix *C)
+{
+    assert(C->kind == MATRIX_SPARSE);
+    const int *map = ((sparse_matrix *) C)->bound_iwork;
+    assert(map != NULL);
+
+    memset(C->x, 0, C->nnz * sizeof(double));
+    for (int k = 0; k < n; k++)
+    {
+        accumulator(ops[k]->x, ops[k]->nnz, map, C->x);
+        map += ops[k]->nnz;
+    }
+    matrix_values_changed(C);
+}
