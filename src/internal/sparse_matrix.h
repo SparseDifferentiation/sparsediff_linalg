@@ -40,8 +40,12 @@ typedef struct sparse_matrix
        transpose_fill_values; row_gather_alloc stores the base.m-long row map
        for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
        position map for row_reduce_fill_values. NULL otherwise; never touched
-       by any other kernel. */
+       by any other kernel. sparse_kron alloc stores the base.m-long
+       csc_to_csr workspace. */
     int *bound_iwork;
+    /* CSC copy of a non-sparse operand bound by BA_sparse_kron_matrices_alloc
+       and refilled by its fill. NULL otherwise. */
+    CSC_matrix *bound_csc;
 } sparse_matrix;
 
 /* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync

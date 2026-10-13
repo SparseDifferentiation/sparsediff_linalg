@@ -46,15 +46,6 @@ typedef enum
 typedef void (*matrix_block_left_mult_vec_fn)(const matrix *A, const double *x,
                                               double *y, int p);
 
-/* Allocate sparsity of C = kron(I_p, A) @ J */
-typedef CSC_matrix *(*matrix_block_left_mult_sparsity_fn)(const matrix *A,
-                                                          const CSC_matrix *J,
-                                                          int p);
-
-/* Fill values of C = kron(I_p, A) @ J */
-typedef void (*matrix_block_left_mult_values_fn)(const matrix *A,
-                                                 const CSC_matrix *J, CSC_matrix *C);
-
 /* Allocate AT = transpose(A) */
 typedef matrix *(*matrix_transpose_alloc_fn)(const matrix *A);
 
@@ -106,8 +97,6 @@ struct matrix
 
     /* Operator ops */
     matrix_block_left_mult_vec_fn block_left_mult_vec;
-    matrix_block_left_mult_sparsity_fn block_left_mult_sparsity;
-    matrix_block_left_mult_values_fn block_left_mult_values;
 
     /* Chain-rule ops */
     matrix_transpose_alloc_fn transpose_alloc;

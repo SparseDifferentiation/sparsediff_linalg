@@ -35,20 +35,6 @@ static void sparse_block_left_mult_vec(const matrix *self, const double *x,
     block_left_multiply_vec(sm->csr, x, y, p);
 }
 
-static CSC_matrix *sparse_block_left_mult_sparsity(const matrix *self,
-                                                   const CSC_matrix *J, int p)
-{
-    const sparse_matrix *sm = (const sparse_matrix *) self;
-    return block_left_multiply_fill_sparsity(sm->csr, J, p);
-}
-
-static void sparse_block_left_mult_values(const matrix *self, const CSC_matrix *J,
-                                          CSC_matrix *C)
-{
-    const sparse_matrix *sm = (const sparse_matrix *) self;
-    block_left_multiply_fill_values(sm->csr, J, C);
-}
-
 static void sparse_free(matrix *self)
 {
     sparse_matrix *sm = (sparse_matrix *) self;
@@ -56,6 +42,7 @@ static void sparse_free(matrix *self)
     free_CSC_matrix(sm->csc_cache);
     sp_free(sm->csc_iwork);
     sp_free(sm->bound_iwork);
+    free_CSC_matrix(sm->bound_csc);
     sp_free(sm);
 }
 
@@ -320,8 +307,6 @@ static void wire_vtable(sparse_matrix *sm)
 {
     sm->base.kind = MATRIX_SPARSE;
     sm->base.block_left_mult_vec = sparse_block_left_mult_vec;
-    sm->base.block_left_mult_sparsity = sparse_block_left_mult_sparsity;
-    sm->base.block_left_mult_values = sparse_block_left_mult_values;
     sm->base.to_csr = sparse_to_csr;
     sm->base.transpose_alloc = sparse_transpose_alloc;
     sm->base.transpose_fill_values = sparse_transpose_fill_values;
