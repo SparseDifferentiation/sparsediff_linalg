@@ -480,30 +480,17 @@ void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *
     dense_kron_fill_values(A, m, J, C, KRON_A_I);
 }
 
-/* C = kron(I_p, A) @ J through the CSC kernel block_left_multiply_*. Its CSC
-   output is C's CSC mirror (csc_cache), converted to C's CSR with the
-   C->m-long bound_iwork. csc_iwork (C->n = J->n ints) doubles as the
-   workspace for converting a non-sparse J into bound_csc. */
+/* C = kron(I_p, A) @ J through the CSC kernel block_left_multiply_*. J is
+   converted (through its CSR view) into bound_csc, using csc_iwork (C->n = J->n
+   ints) as workspace. The kernel's CSC output is C's CSC mirror (csc_cache),
+   converted to C's CSR with the C->m-long bound_iwork. */
 matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J)
 {
     assert(A->kind == MATRIX_SPARSE && J->m == p * A->n);
     int *csc_iwork = (int *) sp_malloc((size_t) J->n * sizeof(int));
-    CSC_matrix *J_csc = NULL;
-    const CSC_matrix *J_read;
-    if (J->kind == MATRIX_SPARSE)
-    {
-        /* the alloc only needs the structure of J's CSC mirror */
-        sparse_matrix_ensure_csc_cache((sparse_matrix *) J);
-        J_read = ((sparse_matrix *) J)->csc_cache;
-    }
-    else
-    {
-        J_csc = csr_to_csc_alloc(J->to_csr(J), csc_iwork);
-        J_read = J_csc;
-    }
-
+    CSC_matrix *J_csc = csr_to_csc_alloc(J->to_csr(J), csc_iwork);
     CSC_matrix *C_csc = block_left_multiply_fill_sparsity(
-        ((const sparse_matrix *) A)->csr, J_read, p);
+        ((const sparse_matrix *) A)->csr, J_csc, p);
     int *csr_iwork = (int *) sp_malloc((size_t) C_csc->m * sizeof(int));
     matrix *C = new_sparse_matrix(csc_to_csr_alloc(C_csc, csr_iwork));
 
@@ -523,21 +510,10 @@ void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
     assert(J->m == p * A->n);
     (void) p;
     sparse_matrix *sm = (sparse_matrix *) C;
-    assert(sm->csc_cache != NULL && sm->bound_iwork != NULL);
-    assert((sm->bound_csc == NULL) == (J->kind == MATRIX_SPARSE));
+    assert(sm->bound_csc != NULL && sm->bound_iwork != NULL);
 
-    const CSC_matrix *J_read;
-    if (J->kind == MATRIX_SPARSE)
-    {
-        J_read = sparse_csc_fresh(J);
-    }
-    else
-    {
-        csr_to_csc_fill_values(J->to_csr(J), sm->bound_csc, sm->csc_iwork);
-        J_read = sm->bound_csc;
-    }
-
-    block_left_multiply_fill_values(((const sparse_matrix *) A)->csr, J_read,
+    csr_to_csc_fill_values(J->to_csr(J), sm->bound_csc, sm->csc_iwork);
+    block_left_multiply_fill_values(((const sparse_matrix *) A)->csr, sm->bound_csc,
                                     sm->csc_cache);
     csc_to_csr_fill_values(sm->csc_cache, sm->csr, sm->bound_iwork);
     matrix_values_changed(C);

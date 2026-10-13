@@ -3303,27 +3303,19 @@ const char *test_BA_dense_kron_I_fill_no_transient_alloc(void)
    row 2: (1: 3) (3: -1). Used with p = 2, so J has 8 rows. */
 static matrix *sk_A(void)
 {
-    CSR_matrix *A = new_CSR_matrix(3, 4, 4);
-    int Ap[4] = {0, 2, 2, 4};
-    int Ai[4] = {0, 2, 1, 3};
-    double Ax[4] = {1, 2, 3, -1};
-    memcpy(A->p, Ap, sizeof(Ap));
-    memcpy(A->i, Ai, sizeof(Ai));
-    memcpy(A->x, Ax, sizeof(Ax));
-    return new_sparse_matrix(A);
+    int p[4] = {0, 2, 2, 4};
+    int i[4] = {0, 2, 1, 3};
+    double x[4] = {1, 2, 3, -1};
+    return sn_sparse(3, 4, 4, p, i, x);
 }
 
 /* 8x5 sparse J with an empty column 2 and entries in both row blocks */
 static matrix *sk_J_sparse(void)
 {
-    CSR_matrix *J = new_CSR_matrix(8, 5, 9);
-    int Jp[9] = {0, 1, 3, 4, 5, 6, 7, 8, 9};
-    int Ji[9] = {0, 1, 4, 3, 0, 1, 4, 3, 0};
-    double Jx[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    memcpy(J->p, Jp, sizeof(Jp));
-    memcpy(J->i, Ji, sizeof(Ji));
-    memcpy(J->x, Jx, sizeof(Jx));
-    return new_sparse_matrix(J);
+    int p[9] = {0, 1, 3, 4, 5, 6, 7, 8, 9};
+    int i[9] = {0, 1, 4, 3, 0, 1, 4, 3, 0};
+    double x[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    return sn_sparse(8, 5, 9, p, i, x);
 }
 
 /* 8x5 permuted_dense J: rows {1, 4, 6}, cols {0, 2, 3} */
@@ -3351,9 +3343,9 @@ static matrix *sk_J_spd(void)
     return new_stacked_pd(8, 5, 2, blocks, NULL, NULL);
 }
 
-/* Oracle: the explicit kron(I_p, A) as a sparse matrix, multiplied through
-   BA_matrices_*, read back densely. */
-static double *sk_oracle(matrix *A, int p, matrix *J)
+/* The explicit kron(I_p, A) = blkdiag(A, ..., A), the dense oracle's left
+   factor */
+static matrix *sk_kron(matrix *A, int p)
 {
     const CSR_matrix *a = A->to_csr(A);
     CSR_matrix *K = new_CSR_matrix(p * a->m, p * a->n, p * a->nnz);
@@ -3370,13 +3362,7 @@ static double *sk_oracle(matrix *A, int p, matrix *J)
             K->p[b * a->m + i + 1] = nnz;
         }
     }
-    matrix *K_m = new_sparse_matrix(K);
-    matrix *R = BA_matrices_alloc(K_m, J);
-    BA_matrices_fill_values(K_m, J, R);
-    double *out = dense_of(R);
-    free_matrix(R);
-    free_matrix(K_m);
-    return out;
+    return new_sparse_matrix(K);
 }
 
 /* C's CSC mirror is fresh and holds C's current values */
@@ -3394,92 +3380,88 @@ static int sk_mirror_fresh(matrix *C)
     return ok;
 }
 
-/* Alloc + fill against the oracle, then change J's values and refill. */
-static const char *sk_check(matrix *J, int check_nnz)
+/* Alloc + fill against the dense oracle, then change J's values and refill.
+   Hands C back through C_out (caller frees) for pattern checks. */
+static const char *sk_check(matrix *A, matrix *J, matrix **C_out)
 {
-    matrix *A = sk_A();
-    const char *err = 0;
+    matrix *K = sk_kron(A, 2);
     matrix *C = BA_sparse_kron_matrices_alloc(A, 2, J);
-    if (C->kind != MATRIX_SPARSE || C->m != 6 || C->n != 5) err = "C shape/kind";
+    const char *err = C->kind == MATRIX_SPARSE ? 0 : "C kind";
     if (!err && !csr_is_valid(C->to_csr(C))) err = "C pattern invalid";
-
     for (int round = 0; !err && round < 2; round++)
     {
-        if (round == 1)
-        {
-            for (int jj = 0; jj < J->nnz; jj++) J->x[jj] = -1.5 * J->x[jj] + jj;
-            matrix_values_changed(J);
-        }
+        if (round == 1) ba_mutate(J);
         BA_sparse_kron_matrices_fill_values(A, 2, J, C);
-        double *got = dense_of(C);
-        double *ref = sk_oracle(A, 2, J);
-        if (!cmp_double_array(got, ref, 30)) err = "C values vs oracle";
-        sp_free(ref);
-        sp_free(got);
+        err = ba_matches_dense(K, J, C, "C values vs dense oracle");
         if (!err && !sk_mirror_fresh(C)) err = "C CSC mirror stale";
     }
-    /* the structural product for sk_J_sparse: block 0 rows {0, 3} and
-       {0, 1, 4}, block 1 rows {1, 3} and {0, 4} (row 1 of A is empty) */
-    if (!err && check_nnz && C->nnz != 9) err = "C nnz";
-    free_matrix(C);
-    free_matrix(A);
+    free_matrix(K);
+    *C_out = C;
     return err;
 }
 
 const char *test_BA_sparse_kron_sparse_J(void)
 {
+    matrix *A = sk_A();
     matrix *J = sk_J_sparse();
-    const char *err = sk_check(J, 1);
+    matrix *C;
+    const char *err = sk_check(A, J, &C);
+    /* C row 0 hits columns {0, 3}, row 2 {0, 1, 4}, row 3 {1, 3}, row 5
+       {0, 4}; rows 1 and 4 are empty (row 1 of A is empty) */
+    int Cp[7] = {0, 2, 2, 5, 7, 7, 9};
+    int Ci[9] = {0, 3, 0, 1, 4, 1, 3, 0, 4};
+    if (!err && !cmp_sparsity(C, Cp, Ci, 6, 9)) err = "C pattern";
+    free_matrix(C);
     free_matrix(J);
+    free_matrix(A);
     mu_assert(err ? err : "", err == 0);
     return 0;
 }
 
 const char *test_BA_sparse_kron_dense_J(void)
 {
-    matrix *J = sk_J_pd();
-    const char *err = sk_check(J, 0);
-    free_matrix(J);
-    mu_assert(err ? err : "", err == 0);
-
-    J = sk_J_spd();
-    err = sk_check(J, 0);
-    free_matrix(J);
+    matrix *A = sk_A();
+    matrix *Js[2] = {sk_J_pd(), sk_J_spd()};
+    const char *err = 0;
+    for (int t = 0; t < 2; t++)
+    {
+        matrix *C;
+        const char *e = sk_check(A, Js[t], &C);
+        if (!err) err = e;
+        free_matrix(C);
+        free_matrix(Js[t]);
+    }
+    free_matrix(A);
     mu_assert(err ? err : "", err == 0);
     return 0;
 }
 
 #ifdef SP_TRACK_MEMORY
-typedef struct
-{
-    const matrix *A;
-    matrix *J;
-    matrix *C;
-} sk_fill_args;
-
 /* bump J so that every conversion runs */
-static void run_sparse_kron_fill(const void *ctx)
+static void run_BA_sparse_kron(const void *ctx)
 {
-    const sk_fill_args *a = (const sk_fill_args *) ctx;
+    const kron_I_fill_args *a = (const kron_I_fill_args *) ctx;
     matrix_values_changed(a->J);
     BA_sparse_kron_matrices_fill_values(a->A, 2, a->J, a->C);
 }
 
+/* None of the three J kinds allocates in the fill. */
 const char *test_BA_sparse_kron_fill_no_transient_alloc(void)
 {
     matrix *A = sk_A();
-    matrix *Js[2] = {sk_J_sparse(), sk_J_spd()};
-    for (int k = 0; k < 2; k++)
+    matrix *Js[3] = {sk_J_sparse(), sk_J_pd(), sk_J_spd()};
+    int ok = 1;
+    for (int t = 0; t < 3; t++)
     {
-        matrix *C = BA_sparse_kron_matrices_alloc(A, 2, Js[k]);
-        sk_fill_args args = {A, Js[k], C};
-        run_sparse_kron_fill(&args); /* warm-up */
-        mu_assert("BA_sparse_kron fill allocates",
-                  fill_is_alloc_free(run_sparse_kron_fill, &args));
+        matrix *C = BA_sparse_kron_matrices_alloc(A, 2, Js[t]);
+        kron_I_fill_args args = {A, Js[t], C};
+        run_BA_sparse_kron(&args); /* warm-up */
+        ok = ok && fill_is_alloc_free(run_BA_sparse_kron, &args);
         free_matrix(C);
-        free_matrix(Js[k]);
+        free_matrix(Js[t]);
     }
     free_matrix(A);
+    mu_assert("BA_sparse_kron fill allocates", ok);
     return 0;
 }
 #endif /* SP_TRACK_MEMORY */

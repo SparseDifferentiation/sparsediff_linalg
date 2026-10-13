@@ -75,20 +75,19 @@ matrix *BA_dense_kron_matrices_alloc(const matrix *A, int p, matrix *J);
 void BA_dense_kron_matrices_fill_values(const matrix *A, int p, const matrix *J,
                                         matrix *C);
 
-/* The sparse sibling: C = kron(I_p, A) @ J for a sparse_matrix A and J of any
-   kind with J->m == p * A->n. C is a sparse_matrix. A sparse J is read through
-   its CSC mirror; a permuted_dense / stacked_pd J is converted to CSC (through
-   its CSR view, which the fill may refresh) into a buffer bound to C. The fill
-   bumps C's values_version and leaves C's CSC mirror fresh. */
-matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J);
-void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
-                                         matrix *C);
-
 /* The mirror image: C = kron(A, I_m) @ J, same contract on A, J any kind, C
    always stacked_pd with one block per i < m holding output rows i + m*c. No
    Kronecker product is formed. */
 matrix *BA_dense_kron_I_matrices_alloc(const matrix *A, int m, matrix *J);
 void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *J,
                                           matrix *C);
+
+/* The sparse sibling of BA_dense_kron_matrices_*: C = kron(I_p, A) @ J for a
+   sparse_matrix A and J of any kind with J->m == p * A->n. C is a
+   sparse_matrix. J is converted to CSC through its CSR view (which the fill
+   may refresh) into a buffer bound to C. The fill bumps C's values_version. */
+matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J);
+void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
+                                         matrix *C);
 
 #endif /* MATMUL_H */
