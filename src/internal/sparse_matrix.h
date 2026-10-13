@@ -39,13 +39,17 @@ typedef struct sparse_matrix
        matching fill: transpose_alloc stores csr->n scratch for
        transpose_fill_values; row_gather_alloc stores the base.m-long row map
        for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
-       position map for row_reduce_fill_values. NULL otherwise; never touched
-       by any other kernel. */
+       position map for row_reduce_fill_values; BA_sparse_kron_matrices_alloc
+       stores the base.m-long csc_to_csr workspace. NULL otherwise; never
+       touched by any other kernel. */
     int *bound_iwork;
     /* Version state bound by vstack_matrices_alloc and read and updated by
        vstack_matrices_fill_values; NULL otherwise. Layout, see
        matrix_vstack.c: [n | C_seen | seen_0 ... seen_{n-1}]. */
     uint64_t *bound_vwork;
+    /* CSC copy of J bound by BA_sparse_kron_matrices_alloc and refilled by
+       its fill; NULL otherwise. */
+    CSC_matrix *bound_csc;
 } sparse_matrix;
 
 /* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync
