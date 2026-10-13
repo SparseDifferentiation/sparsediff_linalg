@@ -20,10 +20,6 @@
 
 #include "sparsediff_linalg/matrix.h"
 
-/* Products of matrix handles through the kind dispatchers. All are two-phase:
-   *_alloc builds and returns the output, *_fill_values writes its values and
-   bumps its values_version. */
-
 /* Polymorphic dispatchers for C = BT @ A and C = BT @ diag(d) @ A, where A
    and B are any matrix type (permuted_dense, stacked_pd, or sparse_matrix).
 

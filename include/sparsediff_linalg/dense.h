@@ -18,8 +18,6 @@
 #ifndef DENSE_H
 #define DENSE_H
 
-/* Small dense helpers on plain double arrays (row-major unless stated). */
-
 /* Example: a = [1, 2], len = 2, repeats = 3, result = [1, 1, 1, 2, 2, 2] */
 void repeat(double *result, const double *a, int len, int repeats);
 
