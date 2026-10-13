@@ -28,13 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void sparse_block_left_mult_vec(const matrix *self, const double *x,
-                                       double *y, int p)
-{
-    const sparse_matrix *sm = (const sparse_matrix *) self;
-    block_left_multiply_vec(sm->csr, x, y, p);
-}
-
 static void sparse_free(matrix *self)
 {
     sparse_matrix *sm = (sparse_matrix *) self;
@@ -307,7 +300,6 @@ static void sparse_row_reduce_fill_values(const matrix *self, matrix *out)
 static void wire_vtable(sparse_matrix *sm)
 {
     sm->base.kind = MATRIX_SPARSE;
-    sm->base.block_left_mult_vec = sparse_block_left_mult_vec;
     sm->base.to_csr = sparse_to_csr;
     sm->base.transpose_alloc = sparse_transpose_alloc;
     sm->base.transpose_fill_values = sparse_transpose_fill_values;

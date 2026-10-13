@@ -178,20 +178,19 @@ static void permuted_dense_vtable_diag_vec_fill_values(matrix *self, matrix *out
     matrix_values_changed(out);
 }
 
-/* ===== Operator-role adapters: PD acting as the constant left operand of
-   left_matmul. Currently restricted to full-block PDs (m0 == m, n0 == n,
-   identity perms) — the only operator shape any caller needs today. */
+/* ===== PD as the constant left operand of y = kron(I_p, A) @ x. Restricted to
+   full-block PDs (m0 == m, n0 == n, identity perms) — the only operator shape
+   any caller needs today. */
 
-static void permuted_dense_vtable_block_left_mult_vec(const matrix *A,
-                                                      const double *x, double *y,
-                                                      int p)
+void BA_kron_vec_pd(const permuted_dense *A, const double *x, double *y, int p)
 {
-    /* Full-block precondition: A->x is a single contiguous row-major m x n
-       block (perms are identity). For a non-trivial PD, A->x still points
-       at pd->X but X only stores the values at the permuted positions; the
-       layout below assumes a full m x n matrix, hence the assert. */
-    assert(((const permuted_dense *) A)->m0 == A->m &&
-           ((const permuted_dense *) A)->n0 == A->n);
+    /* Full-block precondition: X is a single contiguous row-major m x n
+       block (perms are identity). For a non-trivial PD, X only stores the
+       values at the permuted positions; the layout below assumes a full
+       m x n matrix, hence the assert. */
+    int m = A->base.m;
+    int n = A->base.n;
+    assert(A->m0 == m && A->n0 == n);
 
     /* y = kron(I_p, A) @ x via a single dgemm.
        Input x is p blocks of length n (block-interleaved); output y is p
@@ -200,8 +199,8 @@ static void permuted_dense_vtable_block_left_mult_vec(const matrix *A,
            y (p x m) = x (p x n) * A^T (n x m)
        in one shot. CblasRowMajor + CblasNoTrans on x + CblasTrans on A
        gives exactly that. */
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p, A->m, A->n, 1.0, x, A->n,
-                A->x, A->n, 0.0, y, A->m);
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p, m, n, 1.0, x, n, A->X, n,
+                0.0, y, m);
 }
 
 matrix *row_reduce_pd_alloc(const permuted_dense *A, const int *group, int m_out)
@@ -280,7 +279,6 @@ static void wire_vtable(permuted_dense *pd)
 {
     pd->base.kind = MATRIX_PERMUTED_DENSE;
     pd->base.free_fn = permuted_dense_free;
-    pd->base.block_left_mult_vec = permuted_dense_vtable_block_left_mult_vec;
     pd->base.to_csr = permuted_dense_to_csr;
     pd->base.transpose_alloc = permuted_dense_vtable_transpose_alloc;
     pd->base.transpose_fill_values = permuted_dense_vtable_transpose_fill_values;
