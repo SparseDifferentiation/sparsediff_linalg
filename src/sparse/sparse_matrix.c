@@ -18,7 +18,6 @@
 #include "internal/sparse_matrix.h"
 #include "internal/sparse_matrix_cache.h"
 
-#include "internal/CSC_matrix.h"
 #include "internal/csr_kernels.h"
 #include "internal/utils.h"
 #include "sparsediff_linalg/CSC_matrix.h"
@@ -64,7 +63,7 @@ static void sparse_free(matrix *self)
 matrix *new_sparse_matrix(CSR_matrix *A);
 
 /* Build the CSC_matrix cache structure if absent. Values are NOT filled here;
-   fill-phase readers go through sparse_csc_fresh. ATA_alloc only needs
+   fill-phase readers go through sparse_csc_fresh. ATA_matrices_alloc only needs
    structure, so it is safe to call without a subsequent refresh. */
 void sparse_matrix_ensure_csc_cache(sparse_matrix *sm)
 {
@@ -89,20 +88,6 @@ const CSC_matrix *sparse_csc_fresh(const matrix *A)
         sm->csc_seen = sm->base.values_version;
     }
     return sm->csc_cache;
-}
-
-static matrix *sparse_ATA_alloc(matrix *self)
-{
-    sparse_matrix *sm = (sparse_matrix *) self;
-    sparse_matrix_ensure_csc_cache(sm);
-    return new_sparse_matrix(ATA_alloc(sm->csc_cache));
-}
-
-static void sparse_ATDA_fill_values(const matrix *self, const double *d, matrix *out)
-{
-    sparse_matrix *sm_out = (sparse_matrix *) out;
-    ATDA_fill_values(sparse_csc_fresh(self), d, sm_out->csr);
-    matrix_values_changed(out);
 }
 
 static CSR_matrix *sparse_to_csr(matrix *self)
@@ -337,8 +322,6 @@ static void wire_vtable(sparse_matrix *sm)
     sm->base.block_left_mult_vec = sparse_block_left_mult_vec;
     sm->base.block_left_mult_sparsity = sparse_block_left_mult_sparsity;
     sm->base.block_left_mult_values = sparse_block_left_mult_values;
-    sm->base.ATA_alloc = sparse_ATA_alloc;
-    sm->base.ATDA_fill_values = sparse_ATDA_fill_values;
     sm->base.to_csr = sparse_to_csr;
     sm->base.transpose_alloc = sparse_transpose_alloc;
     sm->base.transpose_fill_values = sparse_transpose_fill_values;

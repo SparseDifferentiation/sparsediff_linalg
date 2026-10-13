@@ -11,6 +11,7 @@
  */
 #include "sparsediff_linalg/matmul.h"
 
+#include "internal/CSC_matrix.h"
 #include "internal/CSR_matrix.h"
 #include "internal/csr_kernels.h"
 #include "internal/permuted_dense.h"
@@ -509,6 +510,41 @@ void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C)
         /* A is sparse_matrix */
         DA_csr_fill_values(d, ((const sparse_matrix *) A)->csr,
                            ((sparse_matrix *) C)->csr);
+    }
+    matrix_values_changed(C);
+}
+
+matrix *ATA_matrices_alloc(matrix *A)
+{
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        return ATA_pd_alloc((const permuted_dense *) A);
+    }
+    if (A->kind == MATRIX_STACKED_PD)
+    {
+        return ATA_spd_alloc((const stacked_pd *) A);
+    }
+    /* A is sparse_matrix; the alloc only needs the CSC mirror's structure */
+    sparse_matrix *sm = (sparse_matrix *) A;
+    sparse_matrix_ensure_csc_cache(sm);
+    return new_sparse_matrix(ATA_alloc(sm->csc_cache));
+}
+
+void ATDA_matrices_fill_values(const matrix *A, const double *d, matrix *C)
+{
+    assert(C->kind == A->kind);
+    if (A->kind == MATRIX_PERMUTED_DENSE)
+    {
+        ATDA_pd_fill_values((const permuted_dense *) A, d, (permuted_dense *) C);
+    }
+    else if (A->kind == MATRIX_STACKED_PD)
+    {
+        ATDA_spd_fill_values((const stacked_pd *) A, d, (stacked_pd *) C);
+    }
+    else
+    {
+        /* A is sparse_matrix */
+        ATDA_fill_values(sparse_csc_fresh(A), d, ((sparse_matrix *) C)->csr);
     }
     matrix_values_changed(C);
 }

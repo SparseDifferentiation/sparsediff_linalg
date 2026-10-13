@@ -39,6 +39,15 @@ matrix *BTA_matrices_alloc(matrix *A, matrix *B);
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C);
 
+/* Dispatchers for C = AT @ A and C = AT @ diag(d) @ A, where A is any kind.
+   Each kind uses its symmetric kernel (sparse: upper triangle on the CSC
+   mirror, then mirrored; permuted_dense: one gemm; stacked_pd: one gemm per
+   block), and the output has A's kind. A sparse A is read through its CSC
+   mirror, which the fill refreshes itself. The fill bumps C's values_version
+   and asserts C has A's kind. */
+matrix *ATA_matrices_alloc(matrix *A);
+void ATDA_matrices_fill_values(const matrix *A, const double *d, matrix *C);
+
 /* Polymorphic dispatchers for C = B @ A, where B is permuted_dense or
    sparse_matrix (a stacked_pd B asserts) and A is any kind.
 
