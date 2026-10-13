@@ -38,6 +38,17 @@ CSR_matrix *sum_4_csr_alloc(const CSR_matrix *A, const CSR_matrix *B,
                             const CSR_matrix *C, const CSR_matrix *D,
                             int *idx_maps[4]);
 
+/* C = A @ B where A is CSR_matrix, B is CSC_matrix. Result C is CSR_matrix.
+   Allocates and precomputes the sparsity pattern; no workspace required.
+   Internal: consumers go through BA_matrices_* (matmul.h), which reads a sparse
+   operand through its CSC mirror. */
+CSR_matrix *csr_csc_matmul_alloc(const CSR_matrix *A, const CSC_matrix *B);
+
+/* Fill values of C = A @ B where A is CSR_matrix, B is CSC_matrix. C must have
+   its sparsity pattern already computed (csr_csc_matmul_alloc). */
+void csr_csc_matmul_fill_values(const CSR_matrix *A, const CSC_matrix *B,
+                                CSR_matrix *C);
+
 /* Compute sparsity pattern and values for the matrix-matrix multiplication
    C = (I_p kron A) @ J where A is m x n, J is (n*p) x k, and C is (m*p) x k,
    without relying on generic sparse matrix-matrix multiplication. Specialized
