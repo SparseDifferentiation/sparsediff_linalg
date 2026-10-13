@@ -39,6 +39,10 @@ matrix *BTA_matrices_alloc(matrix *A, matrix *B);
 void BTA_matrices_fill_values(matrix *A, matrix *B, matrix *C);
 void BTDA_matrices_fill_values(matrix *A, const double *d, matrix *B, matrix *C);
 
+/* Fill values of C = diag(d) @ A, where len(d) = A->m. C must have been
+   allocated by copy_sparsity_matrices_alloc(A). Bumps C's values_version. */
+void DA_matrices_fill_values(const double *d, const matrix *A, matrix *C);
+
 /* Dispatchers for C = AT @ A and C = AT @ diag(d) @ A, where A is any kind.
    Each kind uses its symmetric kernel (sparse: upper triangle on the CSC
    mirror, then mirrored; permuted_dense: one gemm; stacked_pd: one gemm per
