@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sparsediff_linalg/csr_kernels.h"
 #include "sparsediff_linalg/dense.h"
 #include <string.h>
 
@@ -86,34 +85,6 @@ void I_kron_XT_vec(int m, int k, int n, const double *X, const double *w, double
                 sum += X[row + j * m] * w[row + col * m];
             }
             v[j + col * k] = sum;
-        }
-    }
-}
-
-void conv_matrix_fill_sparsity(CSR_matrix *T_csr, int m, int n)
-{
-    int nnz = 0;
-    for (int r = 0; r < T_csr->m; r++)
-    {
-        T_csr->p[r] = nnz;
-        int col_lo = r - m + 1 > 0 ? r - m + 1 : 0;
-        int col_hi = r < n - 1 ? r : n - 1;
-        for (int col = col_lo; col <= col_hi; col++)
-        {
-            T_csr->i[nnz] = col;
-            nnz++;
-        }
-    }
-    T_csr->p[T_csr->m] = nnz;
-}
-
-void conv_matrix_fill_values(CSR_matrix *T_csr, const double *a)
-{
-    for (int r = 0; r < T_csr->m; r++)
-    {
-        for (int k = T_csr->p[r]; k < T_csr->p[r + 1]; k++)
-        {
-            T_csr->x[k] = a[r - T_csr->i[k]];
         }
     }
 }
