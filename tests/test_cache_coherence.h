@@ -371,10 +371,10 @@ static const char *cc_check_vtable_bumps(enum cc_kind kind)
     if (!err && !cc_bumped_once(ATA, v)) err = "ATDA_matrices_fill_values";
     free_matrix(ATA);
 
-    matrix *AT = A->transpose_alloc(A);
+    matrix *AT = transpose_matrices_alloc(A);
     v = AT->values_version;
-    A->transpose_fill_values(A, AT);
-    if (!err && !cc_bumped_once(AT, v)) err = "transpose_fill_values";
+    transpose_matrices_fill_values(A, AT);
+    if (!err && !cc_bumped_once(AT, v)) err = "transpose_matrices_fill_values";
     free_matrix(AT);
 
     matrix *G = A->row_gather_alloc(A, map, 3);

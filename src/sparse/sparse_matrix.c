@@ -76,24 +76,6 @@ static CSR_matrix *sparse_to_csr(matrix *self)
     return ((sparse_matrix *) self)->csr;
 }
 
-static matrix *sparse_transpose_alloc(const matrix *self)
-{
-    const sparse_matrix *sm = (const sparse_matrix *) self;
-    int *iwork = (int *) sp_malloc(sm->csr->n * sizeof(int));
-    CSR_matrix *AT = AT_alloc(sm->csr, iwork);
-    sparse_matrix *out = (sparse_matrix *) new_sparse_matrix(AT);
-    out->bound_iwork = iwork;
-    return &out->base;
-}
-
-static void sparse_transpose_fill_values(const matrix *self, matrix *out)
-{
-    const sparse_matrix *sm_in = (const sparse_matrix *) self;
-    sparse_matrix *sm_out = (sparse_matrix *) out;
-    AT_fill_values(sm_in->csr, sm_out->csr, sm_out->bound_iwork);
-    matrix_values_changed(out);
-}
-
 static matrix *sparse_row_gather_alloc(const matrix *self, const int *map, int m_out)
 {
     const CSR_matrix *Jx = ((const sparse_matrix *) self)->csr;
@@ -301,8 +283,6 @@ static void wire_vtable(sparse_matrix *sm)
 {
     sm->base.kind = MATRIX_SPARSE;
     sm->base.to_csr = sparse_to_csr;
-    sm->base.transpose_alloc = sparse_transpose_alloc;
-    sm->base.transpose_fill_values = sparse_transpose_fill_values;
     sm->base.row_gather_alloc = sparse_row_gather_alloc;
     sm->base.row_gather_fill_values = sparse_row_gather_fill_values;
     sm->base.diag_vec_alloc = sparse_diag_vec_alloc;
