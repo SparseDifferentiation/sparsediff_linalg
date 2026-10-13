@@ -6,6 +6,7 @@
    refresh of their own; they mutate operand values, notify the owner, refill, and
    compare against a dense oracle computed from the operands' CSR views. */
 
+#include "internal/matmul_kron.h"
 #include "internal/permuted_dense.h"
 #include "internal/sparse_matrix.h"
 #include "internal/stacked_pd.h"

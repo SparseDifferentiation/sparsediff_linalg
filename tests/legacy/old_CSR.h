@@ -58,8 +58,8 @@ void insert_idx(int idx, int *arr, int len);
 void Ax_csr(const CSR_matrix *A, const double *x, double *y, int col_offset);
 
 /* CSR-output forms of matmul's chain-rule products, superseded by the kron
-   dispatchers (BA_dense_kron_I_matrices_* and BA_dense_kron_matrices_*,
-   matmul_kron.h). */
+   dispatchers (BA_dense_kron_I_matrices_*, matmul_kron.h, and
+   BA_dense_kron_matrices_*, internal/matmul_kron.h). */
 /* Sparsity and values of C = (Y^T kron I_m) @ J where Y is k x n, J is (m*k) x p,
    and C is (m*n) x p. Y is given in column-major dense format. */
 CSR_matrix *YT_kron_I_alloc(int m, int k, int n, const CSC_matrix *J);

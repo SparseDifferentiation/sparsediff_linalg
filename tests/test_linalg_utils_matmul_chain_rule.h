@@ -1,3 +1,4 @@
+#include "internal/matmul_kron.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

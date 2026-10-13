@@ -1,6 +1,7 @@
 #ifndef TEST_MATMUL_DISPATCHERS_H
 #define TEST_MATMUL_DISPATCHERS_H
 
+#include "internal/matmul_kron.h"
 #include "internal/permuted_dense.h"
 #include "internal/permuted_dense_linalg.h"
 #include "internal/sparse_matrix.h"

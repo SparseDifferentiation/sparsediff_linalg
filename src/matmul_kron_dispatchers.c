@@ -9,6 +9,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
+#include "internal/matmul_kron.h"
 #include "sparsediff_linalg/matmul_kron.h"
 
 #include "internal/csr_kernels.h"
