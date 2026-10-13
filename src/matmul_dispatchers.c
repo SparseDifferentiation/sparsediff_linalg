@@ -24,6 +24,7 @@
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matrix.h"
+#include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 
 /* Forward declarations of the fixed-B dispatchers used internally by
@@ -489,6 +490,46 @@ void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *
                                           matrix *C)
 {
     dense_kron_fill_values(A, m, J, C, KRON_A_I);
+}
+
+/* C = kron(I_p, A) @ J through the CSC kernel block_left_multiply_*. J is
+   converted (through its CSR view) into bound_csc, using csc_iwork (C->n = J->n
+   ints) as workspace. The kernel's CSC output is C's CSC mirror (csc_cache),
+   converted to C's CSR with the C->m-long bound_iwork. */
+matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J)
+{
+    assert(A->kind == MATRIX_SPARSE && J->m == p * A->n);
+    int *csc_iwork = (int *) sp_malloc((size_t) J->n * sizeof(int));
+    CSC_matrix *J_csc = csr_to_csc_alloc(J->to_csr(J), csc_iwork);
+    CSC_matrix *C_csc = block_left_multiply_fill_sparsity(
+        ((const sparse_matrix *) A)->csr, J_csc, p);
+    int *csr_iwork = (int *) sp_malloc((size_t) C_csc->m * sizeof(int));
+    matrix *C = new_sparse_matrix(csc_to_csr_alloc(C_csc, csr_iwork));
+
+    sparse_matrix *sm = (sparse_matrix *) C;
+    sm->csc_cache = C_csc;
+    sm->csc_iwork = csc_iwork;
+    sm->csc_seen = C->values_version - 1;
+    sm->bound_iwork = csr_iwork;
+    sm->bound_csc = J_csc;
+    return C;
+}
+
+void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
+                                         matrix *C)
+{
+    assert(A->kind == MATRIX_SPARSE && C->kind == MATRIX_SPARSE);
+    assert(J->m == p * A->n);
+    (void) p;
+    sparse_matrix *sm = (sparse_matrix *) C;
+    assert(sm->bound_csc != NULL && sm->bound_iwork != NULL);
+
+    csr_to_csc_fill_values(J->to_csr(J), sm->bound_csc, sm->csc_iwork);
+    block_left_multiply_fill_values(((const sparse_matrix *) A)->csr, sm->bound_csc,
+                                    sm->csc_cache);
+    csc_to_csr_fill_values(sm->csc_cache, sm->csr, sm->bound_iwork);
+    matrix_values_changed(C);
+    sm->csc_seen = C->values_version;
 }
 
 matrix *copy_sparsity_matrices_alloc(const matrix *A)

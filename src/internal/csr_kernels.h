@@ -19,11 +19,10 @@
 #define INTERNAL_CSR_KERNELS_H
 
 /* Private CSR / CSC kernels: used by the sparse kind's vtable, the matrix sums
-   and the permuted_dense operator role, never by consumers. */
+   and the matmul dispatchers, never by consumers. */
 
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
-#include "sparsediff_linalg/matrix.h"
 
 /* Accumulates `nnz` values from `vals` into `out` at the positions given by
    `idx_map` (length `nnz`). Caller must zero `out` before calling. */
@@ -90,16 +89,5 @@ void block_left_multiply_fill_values(const CSR_matrix *A, const CSC_matrix *J,
    elements.
 */
 void block_left_multiply_vec(const CSR_matrix *A, const double *x, double *y, int p);
-
-/* C = (I_p kron A) @ J via the polymorphic matrix interface.
- * A is dense m x n, J is (n*p) x k in CSC_matrix, C is (m*p) x k in CSC_matrix.
- * `work` must be sized at least A->n doubles — used as a scratch buffer when
- * a sparse column of J needs to be densified before dgemv. The caller is
- * responsible for sizing it (typically pre-sized in the corresponding
- * sparsity-build step). */
-// TODO: maybe we can replace these with I_kron_X functionality?
-CSC_matrix *I_kron_A_alloc(const matrix *A, const CSC_matrix *J, int p);
-void I_kron_A_fill_values(const matrix *A, const CSC_matrix *J, CSC_matrix *C,
-                          double *work);
 
 #endif /* INTERNAL_CSR_KERNELS_H */

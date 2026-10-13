@@ -42,15 +42,6 @@ typedef enum
     MATRIX_STACKED_PD      /* stacked_pd: vertical stack of permuted_dense blocks */
 } matrix_kind;
 
-/* Allocate sparsity of C = kron(I_p, A) @ J */
-typedef CSC_matrix *(*matrix_block_left_mult_sparsity_fn)(const matrix *A,
-                                                          const CSC_matrix *J,
-                                                          int p);
-
-/* Fill values of C = kron(I_p, A) @ J */
-typedef void (*matrix_block_left_mult_values_fn)(const matrix *A,
-                                                 const CSC_matrix *J, CSC_matrix *C);
-
 /* Allocate AT = transpose(A) */
 typedef matrix *(*matrix_transpose_alloc_fn)(const matrix *A);
 
@@ -99,10 +90,6 @@ struct matrix
        OWNER of the buffer — aliased children (spd blocks, cache views) have no
        version of their own. */
     uint64_t values_version;
-
-    /* Operator ops */
-    matrix_block_left_mult_sparsity_fn block_left_mult_sparsity;
-    matrix_block_left_mult_values_fn block_left_mult_values;
 
     /* Chain-rule ops */
     matrix_transpose_alloc_fn transpose_alloc;

@@ -181,7 +181,10 @@ int main(void)
     mu_run_test(test_BA_sparse_matrices_pd_A, tests_run);
     mu_run_test(test_BA_sparse_matrices_spd_A, tests_run);
     mu_run_test(test_BA_sparse_matrices_csc_A, tests_run);
+    mu_run_test(test_BA_sparse_kron_sparse_J, tests_run);
+    mu_run_test(test_BA_sparse_kron_dense_J, tests_run);
 #ifdef SP_TRACK_MEMORY
+    mu_run_test(test_BA_sparse_kron_fill_no_transient_alloc, tests_run);
     mu_run_test(test_BA_sparse_fill_no_transient_alloc, tests_run);
 #endif
     mu_run_test(test_BA_dense_kron_I_sparse_J, tests_run);

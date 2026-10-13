@@ -17,7 +17,6 @@
  */
 #include "internal/permuted_dense.h"
 
-#include "internal/csr_kernels.h"
 #include "internal/permuted_dense_linalg.h"
 #include "internal/utils.h"
 #include "sparsediff_linalg/cblas_wrapper.h"
@@ -179,9 +178,9 @@ static void permuted_dense_vtable_diag_vec_fill_values(matrix *self, matrix *out
     matrix_values_changed(out);
 }
 
-/* ===== Operator-role adapters: PD acting as the constant left operand of
-   left_matmul. Currently restricted to full-block PDs (m0 == m, n0 == n,
-   identity perms) — the only operator shape any caller needs today. */
+/* ===== PD as the constant left operand of y = kron(I_p, A) @ x. Restricted to
+   full-block PDs (m0 == m, n0 == n, identity perms) — the only operator shape
+   any caller needs today. */
 
 void BA_kron_vec_pd(const permuted_dense *A, const double *x, double *y, int p)
 {
@@ -202,28 +201,6 @@ void BA_kron_vec_pd(const permuted_dense *A, const double *x, double *y, int p)
        gives exactly that. */
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p, m, n, 1.0, x, n, A->X, n,
                 0.0, y, m);
-}
-
-static CSC_matrix *
-permuted_dense_vtable_block_left_mult_sparsity(const matrix *A, const CSC_matrix *J,
-                                               int p)
-{
-    const permuted_dense *pd = (const permuted_dense *) A;
-    assert(pd->m0 == A->m && pd->n0 == A->n);
-    /* Pre-size dwork for the subsequent block_left_mult_values fill, which
-       densifies a sparse column of J (size A->n) before applying A. Honors
-       the no-alloc-in-fill rule. */
-    permuted_dense_ensure_kernel_dwork(pd, A->n);
-    return I_kron_A_alloc(A, J, p);
-}
-
-static void permuted_dense_vtable_block_left_mult_values(const matrix *A,
-                                                         const CSC_matrix *J,
-                                                         CSC_matrix *C)
-{
-    const permuted_dense *pd = (const permuted_dense *) A;
-    assert(pd->m0 == A->m && pd->n0 == A->n);
-    I_kron_A_fill_values(A, J, C, pd->kernel_dwork);
 }
 
 matrix *row_reduce_pd_alloc(const permuted_dense *A, const int *group, int m_out)
@@ -302,9 +279,6 @@ static void wire_vtable(permuted_dense *pd)
 {
     pd->base.kind = MATRIX_PERMUTED_DENSE;
     pd->base.free_fn = permuted_dense_free;
-    pd->base.block_left_mult_sparsity =
-        permuted_dense_vtable_block_left_mult_sparsity;
-    pd->base.block_left_mult_values = permuted_dense_vtable_block_left_mult_values;
     pd->base.to_csr = permuted_dense_to_csr;
     pd->base.transpose_alloc = permuted_dense_vtable_transpose_alloc;
     pd->base.transpose_fill_values = permuted_dense_vtable_transpose_fill_values;
