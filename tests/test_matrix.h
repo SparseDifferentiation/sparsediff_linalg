@@ -2,7 +2,7 @@
 #define TEST_MATRIX_H
 
 #include "minunit.h"
-#include "sparsediff_linalg/matmul.h"
+#include "sparsediff_linalg/matmul_kron.h"
 #include "sparsediff_linalg/matrix.h"
 #include "test_helpers.h"
 #include <stdlib.h>
