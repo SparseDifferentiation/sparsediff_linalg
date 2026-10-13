@@ -227,3 +227,71 @@ CSR_matrix *sum_4_csr_alloc(const CSR_matrix *A, const CSR_matrix *B,
     CSR_trim(out);
     return out;
 }
+
+CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int *idx_map)
+{
+    assert(n >= 1);
+    int m = ops[0]->m;
+    int n_cols = ops[0]->n;
+    long long total_nnz = 0; /* n operands can overflow an int sum */
+    for (int k = 0; k < n; k++)
+    {
+        assert(ops[k]->m == m && ops[k]->n == n_cols);
+        total_nnz += ops[k]->nnz;
+    }
+    int nnz_ub = (int) MIN(total_nnz, (long long) sat_mul_int(m, n_cols));
+
+    CSR_matrix *out = new_CSR_matrix(m, n_cols, nnz_ub);
+
+    /* pos[j] is column j's position in out. A value below the current row's
+       start was set in an earlier row, so it marks column j unseen in this
+       row. */
+    int *pos = (int *) sp_malloc(n_cols * sizeof(int));
+    for (int j = 0; j < n_cols; j++)
+    {
+        pos[j] = -1;
+    }
+
+    int nnz = 0;
+    for (int i = 0; i < m; i++)
+    {
+        int start = nnz;
+        out->p[i] = start;
+
+        /* gather the row's unique columns, then sort them */
+        for (int k = 0; k < n; k++)
+        {
+            for (int jj = ops[k]->p[i]; jj < ops[k]->p[i + 1]; jj++)
+            {
+                int j = ops[k]->i[jj];
+                if (pos[j] < start)
+                {
+                    pos[j] = start;
+                    out->i[nnz++] = j;
+                }
+            }
+        }
+        sort_int_array(out->i + start, nnz - start);
+
+        /* record positions and fill the index maps */
+        for (int jj = start; jj < nnz; jj++)
+        {
+            pos[out->i[jj]] = jj;
+        }
+        int *map_k = idx_map;
+        for (int k = 0; k < n; k++)
+        {
+            for (int jj = ops[k]->p[i]; jj < ops[k]->p[i + 1]; jj++)
+            {
+                map_k[jj] = pos[ops[k]->i[jj]];
+            }
+            map_k += ops[k]->nnz;
+        }
+    }
+
+    sp_free(pos);
+    out->p[m] = nnz;
+    out->nnz = nnz;
+    CSR_trim(out);
+    return out;
+}
