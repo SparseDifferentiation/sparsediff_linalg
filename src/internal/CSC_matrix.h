@@ -18,15 +18,19 @@
 #ifndef INTERNAL_CSC_MATRIX_H
 #define INTERNAL_CSC_MATRIX_H
 
-/* Private CSC kernels behind the sparse kind's ATA / ATDA vtable slots. */
+/* Private A^T A kernels behind the sparse kind's ATA / ATDA dispatch: thin
+   wrappers over the row-wise Gustavson core (internal/gustavson.h). */
 
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 
-/* Fill sparsity of C = A^T D A for diagonal D */
-CSR_matrix *ATA_alloc(const CSC_matrix *A);
+/* Fill sparsity of C = A^T D A for diagonal D. A_csc is A's CSC mirror (the
+   left operand, read column-wise), A its CSR; C is n x n with sorted rows. */
+CSR_matrix *ATA_alloc(const CSC_matrix *A_csc, const CSR_matrix *A);
 
-/* Compute values for C = A^T D A (null d corresponds to D as identity) */
-void ATDA_fill_values(const CSC_matrix *A, const double *d, CSR_matrix *C);
+/* Compute values for C = A^T D A (NULL d corresponds to D as identity) into C
+   allocated by ATA_alloc. acc is a caller-owned workspace of length A->n. */
+void ATDA_fill_values(const CSC_matrix *A_csc, const double *d, const CSR_matrix *A,
+                      double *acc, CSR_matrix *C);
 
 #endif /* INTERNAL_CSC_MATRIX_H */
