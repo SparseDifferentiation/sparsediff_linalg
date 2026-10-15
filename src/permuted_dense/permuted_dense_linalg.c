@@ -279,6 +279,37 @@ static inline double sparse_dot_dense(const double *vals, const int *idxs, int l
     return sum;
 }
 
+/* Rows i..i+3 of C = B @ S for the compact CSC (cp, rows, vals) bound by
+   BA_pd_csr_alloc; bi and ci point at row i of B and C. */
+static inline void BA_pd_csr_rows4(const double *bi, int n0_B, const int *cp,
+                                   const int *rows, const double *vals, double *ci,
+                                   int n0_C)
+{
+    const double *b1 = bi + n0_B;
+    const double *b2 = b1 + n0_B;
+    const double *b3 = b2 + n0_B;
+    double *c1 = ci + n0_C;
+    double *c2 = c1 + n0_C;
+    double *c3 = c2 + n0_C;
+    for (int c = 0; c < n0_C; c++)
+    {
+        double a0 = 0.0, a1 = 0.0, a2 = 0.0, a3 = 0.0;
+        for (int d = cp[c]; d < cp[c + 1]; d++)
+        {
+            int r = rows[d];
+            double v = vals[d];
+            a0 += bi[r] * v;
+            a1 += b1[r] * v;
+            a2 += b2[r] * v;
+            a3 += b3[r] * v;
+        }
+        ci[c] = a0;
+        c1[c] = a1;
+        c2[c] = a2;
+        c3[c] = a3;
+    }
+}
+
 matrix *BA_pd_csr_alloc(const permuted_dense *B, const CSR_matrix *S)
 {
     /* C's columns are the union of the patterns of rows B->col_perm of S.
@@ -375,7 +406,14 @@ void BA_pd_csr_fill_values(const double *B, int n0_B, const CSR_matrix *S,
         vals[d] = S->x[pos[d]];
     }
 
-    for (int i = 0; i < C->m0; i++)
+    /* 4 rows of B per visited entry, then the remainder one row at a time. */
+    int i = 0;
+    for (; i + 4 <= C->m0; i += 4)
+    {
+        BA_pd_csr_rows4(B + (size_t) i * n0_B, n0_B, cp, rows, vals,
+                        C->X + (size_t) i * n0_C, n0_C);
+    }
+    for (; i < C->m0; i++)
     {
         const double *bi = B + (size_t) i * n0_B;
         double *ci = C->X + (size_t) i * n0_C;
