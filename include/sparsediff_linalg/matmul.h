@@ -62,9 +62,9 @@ void ATDA_matrices_fill_values(const matrix *A, const double *d, matrix *C);
      - B is sparse_matrix, A is sparse  -> output is sparse_matrix.
 
    A sparse B is read in place (its CSR is B^T in CSC form, so no transpose is
-   formed); a sparse A is read through its CSC mirror, which the fill refreshes
-   itself. The fill bumps C's values_version and asserts C has the kind the
-   alloc produced. */
+   formed); a sparse A under a PD B is read through its CSC mirror, which the
+   fill refreshes itself. The fill bumps C's values_version and asserts C has
+   the kind the alloc produced. */
 matrix *BA_matrices_alloc(const matrix *B, matrix *A);
 void BA_matrices_fill_values(const matrix *B, const matrix *A, matrix *C);
 

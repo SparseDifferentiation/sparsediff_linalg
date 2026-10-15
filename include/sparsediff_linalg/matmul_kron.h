@@ -48,9 +48,9 @@ void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *
      - p == 1         -> as BA_matrices_* (matmul.h).
      - A is full PD   -> stacked_pd.
      - A is sparse    -> sparse_matrix.
-   A sparse J is read through its CSC mirror (full PD A) or converted to CSC
-   through its CSR view (sparse A); the fill refreshes either. The fill bumps
-   C's values_version. */
+   A sparse J is read through its CSC mirror (full PD A), which the fill
+   refreshes, or through its CSR (sparse A). The fill bumps C's
+   values_version. */
 matrix *BA_kron_matrices_alloc(const matrix *A, int p, matrix *J);
 void BA_kron_matrices_fill_values(const matrix *A, int p, matrix *J, matrix *C);
 

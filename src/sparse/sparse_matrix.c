@@ -36,7 +36,6 @@ void sparse_matrix_free(matrix *self)
     sp_free(sm->csc_iwork);
     sp_free(sm->bound_iwork);
     sp_free(sm->bound_vwork);
-    free_CSC_matrix(sm->bound_csc);
     sp_free(sm->bound_dwork);
     sp_free(sm);
 }
@@ -260,6 +259,13 @@ matrix *new_sparse_matrix(CSR_matrix *A)
     wire_vtable(sm);
     sm->csr = A;
     return &sm->base;
+}
+
+matrix *new_sparse_matrix_dwork(CSR_matrix *A)
+{
+    matrix *C = new_sparse_matrix(A);
+    ((sparse_matrix *) C)->bound_dwork = (double *) sp_malloc(C->n * sizeof(double));
+    return C;
 }
 
 matrix *new_sparse_matrix_alloc(int m, int n, int nnz)

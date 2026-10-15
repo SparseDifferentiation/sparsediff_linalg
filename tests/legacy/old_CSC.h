@@ -23,7 +23,9 @@
    symBA_alloc, BA_fill_values and yTA_fill_values were the engine's quad_form /
    quad_over_lin helpers, retired by the matrix dispatchers (Q J_f as B^T A with
    Q the transposed operand). The old_* kernels are the dot-product sparse x
-   sparse kernels retired by the Gustavson core (src/sparse/gustavson.c). */
+   sparse kernels retired by the Gustavson core (src/sparse/gustavson.c);
+   old_csr_csc_matmul_* (B A) and old_block_left_multiply_* (kron(I_p, A) J, CSC
+   output) likewise. */
 
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
@@ -52,5 +54,16 @@ CSR_matrix *old_BTA_alloc(const CSC_matrix *A, const CSC_matrix *B);
 /* Compute values for C = B^T D A (NULL d corresponds to D as identity). */
 void old_BTDA_fill_values(const CSC_matrix *A, const CSC_matrix *B, const double *d,
                           CSR_matrix *C);
+
+/* C = A @ B, A CSR and B CSC, C CSR. */
+CSR_matrix *old_csr_csc_matmul_alloc(const CSR_matrix *A, const CSC_matrix *B);
+void old_csr_csc_matmul_fill_values(const CSR_matrix *A, const CSC_matrix *B,
+                                    CSR_matrix *C);
+
+/* C = kron(I_p, A) @ J with A m x n, J (n*p) x k in CSC; C is (m*p) x k in CSC. */
+CSC_matrix *old_block_left_multiply_fill_sparsity(const CSR_matrix *A,
+                                                  const CSC_matrix *J, int p);
+void old_block_left_multiply_fill_values(const CSR_matrix *A, const CSC_matrix *J,
+                                         CSC_matrix *C);
 
 #endif /* OLD_CSC_H */

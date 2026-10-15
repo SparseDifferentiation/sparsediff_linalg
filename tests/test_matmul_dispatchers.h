@@ -3159,8 +3159,8 @@ const char *test_BA_sparse_matrices_spd_A(void)
     return 0;
 }
 
-/* sparse B x sparse A -> sparse C, refilled after mutating both operands (A's
-   CSC mirror must refresh). */
+/* sparse B x sparse A -> sparse C, refilled after mutating both operands; no
+   CSC mirror is built on either side. */
 const char *test_BA_sparse_matrices_csc_A(void)
 {
     matrix *B = ba_sparse_B();
@@ -3184,6 +3184,11 @@ const char *test_BA_sparse_matrices_csc_A(void)
     BA_matrices_fill_values(B, A, C);
     err = ba_matches_dense(B, A, C, "sparse x sparse refill after mutating B, A");
     mu_assert(err ? err : "", err == 0);
+    mu_assert("sparse x sparse built a CSC mirror",
+              ((sparse_matrix *) B)->csc_cache == NULL &&
+                  ((sparse_matrix *) A)->csc_cache == NULL);
+    mu_assert("sparse x sparse C has no accumulator",
+              ((sparse_matrix *) C)->bound_dwork != NULL);
 
     free_matrix(C);
     free_matrix(A);
@@ -3205,8 +3210,8 @@ static void run_BA_matrices(const void *ctx)
     BA_matrices_fill_values(a->B, a->A, a->C);
 }
 
-/* The sparse-B fills read B in place and A through caches the alloc built, so
-   none of the three cells allocates. */
+/* The sparse-B fills read B in place and A through its CSR or caches the alloc
+   built, so none of the three cells allocates. */
 const char *test_BA_sparse_fill_no_transient_alloc(void)
 {
     matrix *B = ba_sparse_B();
@@ -3504,19 +3509,13 @@ static matrix *sk_kron(matrix *A, int p)
     return new_sparse_matrix(K);
 }
 
-/* C's CSC mirror is fresh and holds C's current values */
-static int sk_mirror_fresh(matrix *C)
+/* No CSC mirror is involved: C carries the accumulator, a sparse J keeps none. */
+static int sk_no_mirror(matrix *J, matrix *C)
 {
-    sparse_matrix *sm = (sparse_matrix *) C;
-    if (sm->csc_seen != C->values_version) return 0;
-    int *iw = (int *) sp_malloc((size_t) C->n * sizeof(int));
-    CSC_matrix *ref = csr_to_csc_alloc(sm->csr, iw);
-    csr_to_csc_fill_values(sm->csr, ref, iw);
-    int ok = ref->nnz == sm->csc_cache->nnz &&
-             cmp_double_array(sm->csc_cache->x, ref->x, ref->nnz);
-    free_CSC_matrix(ref);
-    sp_free(iw);
-    return ok;
+    if (((sparse_matrix *) C)->bound_dwork == NULL) return 0;
+    if (J->kind == MATRIX_SPARSE && ((sparse_matrix *) J)->csc_cache != NULL)
+        return 0;
+    return 1;
 }
 
 /* Alloc + fill against the dense oracle, then change J's values and refill.
@@ -3532,7 +3531,7 @@ static const char *sk_check(matrix *A, matrix *J, matrix **C_out)
         if (round == 1) ba_mutate(J);
         BA_sparse_kron_matrices_fill_values(A, 2, J, C);
         err = ba_matches_dense(K, J, C, "C values vs dense oracle");
-        if (!err && !sk_mirror_fresh(C)) err = "C CSC mirror stale";
+        if (!err && !sk_no_mirror(J, C)) err = "CSC mirror built";
     }
     free_matrix(K);
     *C_out = C;

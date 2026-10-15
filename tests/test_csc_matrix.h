@@ -13,16 +13,6 @@
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "test_helpers.h"
 
-/* CSR of a CSC fixture: the kernels read A row-wise. */
-static CSR_matrix *csc_test_csr_of(const CSC_matrix *A)
-{
-    int *iwork = (int *) sp_malloc((A->m > 0 ? A->m : 1) * sizeof(int));
-    CSR_matrix *R = csc_to_csr_alloc(A, iwork);
-    csc_to_csr_fill_values(A, R, iwork);
-    sp_free(iwork);
-    return R;
-}
-
 /* Test ATA_alloc with a simple 3x3 example
  * A is 4x3 (4 rows, 3 columns):
  * [x  0  x]
@@ -44,7 +34,7 @@ const char *test_ATA_alloc_simple(void)
     memcpy(A->p, Ap, 4 * sizeof(int));
     memcpy(A->i, Ai, 5 * sizeof(int));
     memcpy(A->x, Ax, 5 * sizeof(double));
-    CSR_matrix *A_csr = csc_test_csr_of(A);
+    CSR_matrix *A_csr = new_csr_of_csc(A);
 
     /* Compute C = A^T A */
     CSR_matrix *C = ATA_alloc(A, A_csr);
@@ -85,7 +75,7 @@ const char *test_ATA_alloc_diagonal_like(void)
     memcpy(A->p, Ap, 5 * sizeof(int));
     memcpy(A->i, Ai, 4 * sizeof(int));
     memcpy(A->x, Ax, 4 * sizeof(double));
-    CSR_matrix *A_csr = csc_test_csr_of(A);
+    CSR_matrix *A_csr = new_csr_of_csc(A);
     CSR_matrix *C = ATA_alloc(A, A_csr);
 
     int expected_p[5] = {0, 2, 3, 4, 6};
@@ -112,7 +102,7 @@ const char *test_ATA_alloc_random(void)
     memcpy(A->p, Ap, 16 * sizeof(int));
     memcpy(A->i, Ai, 15 * sizeof(int));
     memcpy(A->x, Ax, 15 * sizeof(double));
-    CSR_matrix *A_csr = csc_test_csr_of(A);
+    CSR_matrix *A_csr = new_csr_of_csc(A);
     CSR_matrix *C = ATA_alloc(A, A_csr);
 
     int expected_p[16] = {0, 2, 2, 2, 2, 8, 11, 13, 14, 16, 21, 27, 27, 27, 33, 38};
@@ -156,7 +146,7 @@ const char *test_ATA_alloc_random2(void)
     memcpy(A->p, Ap, 11 * sizeof(int));
     memcpy(A->i, Ai, 15 * sizeof(int));
     memcpy(A->x, Ax, 15 * sizeof(double));
-    CSR_matrix *A_csr = csc_test_csr_of(A);
+    CSR_matrix *A_csr = new_csr_of_csc(A);
     CSR_matrix *C = ATA_alloc(A, A_csr);
 
     int expected_p[11] = {0, 1, 4, 7, 7, 10, 13, 13, 15, 15, 17};
@@ -218,7 +208,7 @@ const char *test_BTA_alloc_and_BTDA_fill(void)
     memcpy(B->x, Bx, 4 * sizeof(double));
 
     /* Allocate C = B^T A (should be 2x3) */
-    CSR_matrix *A_csr = csc_test_csr_of(A);
+    CSR_matrix *A_csr = new_csr_of_csc(A);
     CSR_matrix *C = BTA_alloc(A_csr, B);
 
     /* Sparsity pattern check before filling values */
@@ -248,41 +238,6 @@ const char *test_BTA_alloc_and_BTDA_fill(void)
 /* ---- The Gustavson-backed kernels against the retired ones (legacy/old_CSC.h)
    on random operands. ---- */
 
-static CSC_matrix *csc_test_csc_of(const CSR_matrix *A)
-{
-    int *iwork = (int *) sp_malloc((A->n > 0 ? A->n : 1) * sizeof(int));
-    CSC_matrix *C = csr_to_csc_alloc(A, iwork);
-    csr_to_csc_fill_values(A, C, iwork);
-    sp_free(iwork);
-    return C;
-}
-
-/* Random m x n CSR with the given density; column dense_col is full, row
-   skip_row and column skip_col are empty (-1 disables each). */
-static CSR_matrix *csc_test_random_csr(int m, int n, double density, int dense_col,
-                                       int skip_row, int skip_col)
-{
-    CSR_matrix *A = new_CSR_matrix(m, n, m * n);
-    int nnz = 0;
-    A->p[0] = 0;
-    for (int i = 0; i < m; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            if (i == skip_row || j == skip_col) continue;
-            if (j == dense_col || rand() < density * RAND_MAX)
-            {
-                A->i[nnz] = j;
-                A->x[nnz] = rand() / (double) RAND_MAX - 0.5;
-                nnz++;
-            }
-        }
-        A->p[i + 1] = nnz;
-    }
-    CSR_trim(A);
-    return A;
-}
-
 static double *csc_test_random_vec(int n)
 {
     double *d = (double *) sp_malloc(n * sizeof(double));
@@ -293,25 +248,12 @@ static double *csc_test_random_vec(int n)
     return d;
 }
 
-/* Same pattern exactly; values equal up to summation order. */
-static int csc_test_csr_close(const CSR_matrix *A, const CSR_matrix *B)
-{
-    if (A->m != B->m || A->n != B->n || A->nnz != B->nnz) return 0;
-    if (!cmp_int_array(A->p, B->p, A->m + 1) || !cmp_int_array(A->i, B->i, A->nnz))
-        return 0;
-    for (int ii = 0; ii < A->nnz; ii++)
-    {
-        if (fabs(A->x[ii] - B->x[ii]) > 1e-10) return 0;
-    }
-    return 1;
-}
-
 /* B^T A and B^T D A, new kernels vs legacy. */
 static const char *csc_test_bta_vs_legacy(const CSR_matrix *A, const CSR_matrix *B,
                                           int with_d)
 {
-    CSC_matrix *A_csc = csc_test_csc_of(A);
-    CSC_matrix *B_csc = csc_test_csc_of(B);
+    CSC_matrix *A_csc = new_csc_of_csr(A);
+    CSC_matrix *B_csc = new_csc_of_csr(B);
     double *d = with_d ? csc_test_random_vec(A->m) : NULL;
     double *acc = (double *) sp_malloc(A->n * sizeof(double));
 
@@ -325,11 +267,11 @@ static const char *csc_test_bta_vs_legacy(const CSR_matrix *A, const CSR_matrix 
     BTDA_fill_values(A, B_csc, d, acc, C);
     old_BTDA_fill_values(A_csc, B_csc, d, C_old);
     mu_assert("BTDA_fill_values: values differ from legacy",
-              csc_test_csr_close(C, C_old));
+              csr_equal_tol(C, C_old, 1e-10));
 
     /* refill with the same acc */
     BTDA_fill_values(A, B_csc, d, acc, C);
-    mu_assert("BTDA_fill_values: refill differs", csc_test_csr_close(C, C_old));
+    mu_assert("BTDA_fill_values: refill differs", csr_equal_tol(C, C_old, 1e-10));
 
     free_CSR_matrix(C);
     free_CSR_matrix(C_old);
@@ -342,7 +284,7 @@ static const char *csc_test_bta_vs_legacy(const CSR_matrix *A, const CSR_matrix 
 
 static const char *csc_test_ata_vs_legacy(const CSR_matrix *A, int with_d)
 {
-    CSC_matrix *A_csc = csc_test_csc_of(A);
+    CSC_matrix *A_csc = new_csc_of_csr(A);
     double *d = with_d ? csc_test_random_vec(A->m) : NULL;
     double *acc = (double *) sp_malloc(A->n * sizeof(double));
 
@@ -356,7 +298,7 @@ static const char *csc_test_ata_vs_legacy(const CSR_matrix *A, int with_d)
     ATDA_fill_values(A_csc, d, A, acc, C);
     old_ATDA_fill_values(A_csc, d, C_old);
     mu_assert("ATDA_fill_values: values differ from legacy",
-              csc_test_csr_close(C, C_old));
+              csr_equal_tol(C, C_old, 1e-10));
 
     free_CSR_matrix(C);
     free_CSR_matrix(C_old);
@@ -369,16 +311,16 @@ static const char *csc_test_ata_vs_legacy(const CSR_matrix *A, int with_d)
 const char *test_gustavson_BTA_matches_legacy(void)
 {
     /* tall and wide operands, with and without D */
-    CSR_matrix *A = csc_test_random_csr(60, 40, 0.1, -1, -1, -1);
-    CSR_matrix *B = csc_test_random_csr(60, 25, 0.1, -1, -1, -1);
+    CSR_matrix *A = new_csr_random_ex(60, 40, 0.1, -1, -1, -1);
+    CSR_matrix *B = new_csr_random_ex(60, 25, 0.1, -1, -1, -1);
     const char *err = csc_test_bta_vs_legacy(A, B, 0);
     if (err == NULL) err = csc_test_bta_vs_legacy(A, B, 1);
     free_CSR_matrix(A);
     free_CSR_matrix(B);
     mu_assert(err, err == NULL);
 
-    A = csc_test_random_csr(40, 60, 0.1, -1, -1, -1);
-    B = csc_test_random_csr(40, 30, 0.15, -1, -1, -1);
+    A = new_csr_random_ex(40, 60, 0.1, -1, -1, -1);
+    B = new_csr_random_ex(40, 30, 0.15, -1, -1, -1);
     err = csc_test_bta_vs_legacy(A, B, 1);
     free_CSR_matrix(A);
     free_CSR_matrix(B);
@@ -388,13 +330,13 @@ const char *test_gustavson_BTA_matches_legacy(void)
 
 const char *test_gustavson_ATA_matches_legacy(void)
 {
-    CSR_matrix *A = csc_test_random_csr(60, 40, 0.1, -1, -1, -1);
+    CSR_matrix *A = new_csr_random_ex(60, 40, 0.1, -1, -1, -1);
     const char *err = csc_test_ata_vs_legacy(A, 0);
     if (err == NULL) err = csc_test_ata_vs_legacy(A, 1);
     free_CSR_matrix(A);
     mu_assert(err, err == NULL);
 
-    A = csc_test_random_csr(40, 60, 0.1, -1, -1, -1);
+    A = new_csr_random_ex(40, 60, 0.1, -1, -1, -1);
     err = csc_test_ata_vs_legacy(A, 1);
     free_CSR_matrix(A);
     mu_assert(err, err == NULL);
@@ -404,8 +346,8 @@ const char *test_gustavson_ATA_matches_legacy(void)
 /* A dense column in A and in B. */
 const char *test_gustavson_dense_column(void)
 {
-    CSR_matrix *A = csc_test_random_csr(50, 30, 0.05, 7, -1, -1);
-    CSR_matrix *B = csc_test_random_csr(50, 20, 0.05, 3, -1, -1);
+    CSR_matrix *A = new_csr_random_ex(50, 30, 0.05, 7, -1, -1);
+    CSR_matrix *B = new_csr_random_ex(50, 20, 0.05, 3, -1, -1);
     const char *err = csc_test_bta_vs_legacy(A, B, 1);
     if (err == NULL) err = csc_test_ata_vs_legacy(A, 1);
     free_CSR_matrix(A);
@@ -417,8 +359,8 @@ const char *test_gustavson_dense_column(void)
 /* Empty rows and columns, including an empty row of C. */
 const char *test_gustavson_empty_rows_and_cols(void)
 {
-    CSR_matrix *A = csc_test_random_csr(30, 20, 0.1, -1, 5, 3);
-    CSR_matrix *B = csc_test_random_csr(30, 12, 0.1, -1, 5, 4);
+    CSR_matrix *A = new_csr_random_ex(30, 20, 0.1, -1, 5, 3);
+    CSR_matrix *B = new_csr_random_ex(30, 12, 0.1, -1, 5, 4);
     const char *err = csc_test_bta_vs_legacy(A, B, 1);
     if (err == NULL) err = csc_test_ata_vs_legacy(A, 1);
     free_CSR_matrix(A);
@@ -426,8 +368,8 @@ const char *test_gustavson_empty_rows_and_cols(void)
     mu_assert(err, err == NULL);
 
     /* no nonzeros at all */
-    A = csc_test_random_csr(8, 6, 0.0, -1, -1, -1);
-    B = csc_test_random_csr(8, 5, 0.0, -1, -1, -1);
+    A = new_csr_random_ex(8, 6, 0.0, -1, -1, -1);
+    B = new_csr_random_ex(8, 5, 0.0, -1, -1, -1);
     err = csc_test_bta_vs_legacy(A, B, 0);
     if (err == NULL) err = csc_test_ata_vs_legacy(A, 0);
     free_CSR_matrix(A);
@@ -439,8 +381,8 @@ const char *test_gustavson_empty_rows_and_cols(void)
 /* The sparse x sparse dispatchers bind the accumulator to C at alloc. */
 const char *test_sparse_BTA_ATA_bind_accumulator(void)
 {
-    matrix *A = new_sparse_matrix(csc_test_random_csr(30, 20, 0.1, -1, -1, -1));
-    matrix *B = new_sparse_matrix(csc_test_random_csr(30, 12, 0.1, -1, -1, -1));
+    matrix *A = new_sparse_matrix(new_csr_random_ex(30, 20, 0.1, -1, -1, -1));
+    matrix *B = new_sparse_matrix(new_csr_random_ex(30, 12, 0.1, -1, -1, -1));
     matrix *C = BTA_matrices_alloc(A, B);
     matrix *G = ATA_matrices_alloc(A);
     mu_assert("BTA: no accumulator bound",
@@ -481,8 +423,8 @@ static void csc_test_run_ATDA(const void *ctx)
    first fill builds the CSC mirror values, so warm up once. */
 const char *test_sparse_BTDA_ATDA_fill_no_transient_alloc(void)
 {
-    matrix *A = new_sparse_matrix(csc_test_random_csr(40, 30, 0.1, 2, -1, -1));
-    matrix *B = new_sparse_matrix(csc_test_random_csr(40, 15, 0.1, -1, -1, -1));
+    matrix *A = new_sparse_matrix(new_csr_random_ex(40, 30, 0.1, 2, -1, -1));
+    matrix *B = new_sparse_matrix(new_csr_random_ex(40, 15, 0.1, -1, -1, -1));
     double *d = csc_test_random_vec(40);
     matrix *C = BTA_matrices_alloc(A, B);
     matrix *G = ATA_matrices_alloc(A);

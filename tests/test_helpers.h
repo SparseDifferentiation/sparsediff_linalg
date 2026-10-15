@@ -1,6 +1,7 @@
 #ifndef TEST_HELPERS_H
 #define TEST_HELPERS_H
 
+#include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matrix.h"
 
@@ -29,6 +30,19 @@ int csr_is_valid(const CSR_matrix *A);
 /* Create a random m x n CSR_matrix matrix with approximate nonzero density
  * in [0, 1]. Nonzero values are standard Gaussian (Box-Muller). */
 CSR_matrix *new_csr_random(int m, int n, double density);
+
+/* Random m x n CSR with the given density; column dense_col is full, row
+ * skip_row and column skip_col are empty (-1 disables each). Values uniform
+ * in [-0.5, 0.5). */
+CSR_matrix *new_csr_random_ex(int m, int n, double density, int dense_col,
+                              int skip_row, int skip_col);
+
+/* Format conversions (values copied). */
+CSR_matrix *new_csr_of_csc(const CSC_matrix *A);
+CSC_matrix *new_csc_of_csr(const CSR_matrix *A);
+
+/* Same shape and pattern exactly, values within tol. */
+int csr_equal_tol(const CSR_matrix *A, const CSR_matrix *B, double tol);
 
 /* Only available with -DSP_TRACK_MEMORY=ON: reads the tracked allocator
  * counters, which do not exist in a default build. */
