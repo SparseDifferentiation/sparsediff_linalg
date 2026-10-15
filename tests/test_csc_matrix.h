@@ -13,7 +13,7 @@
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "test_helpers.h"
 
-/* The kernels read A row-wise: CSR built from the CSC fixture. */
+/* CSR of a CSC fixture: the kernels read A row-wise. */
 static CSR_matrix *csc_test_csr_of(const CSC_matrix *A)
 {
     int *iwork = (int *) sp_malloc((A->m > 0 ? A->m : 1) * sizeof(int));
@@ -245,9 +245,8 @@ const char *test_BTA_alloc_and_BTDA_fill(void)
     return 0;
 }
 
-/* ---- Gustavson core (BTA_alloc / BTDA_fill_values / ATA_alloc /
-   ATDA_fill_values) against the retired dot-product kernels in
-   tests/legacy/old_CSC.h on random operands. ---- */
+/* ---- The Gustavson-backed kernels against the retired ones (legacy/old_CSC.h)
+   on random operands. ---- */
 
 static CSC_matrix *csc_test_csc_of(const CSR_matrix *A)
 {
@@ -258,9 +257,8 @@ static CSC_matrix *csc_test_csc_of(const CSR_matrix *A)
     return C;
 }
 
-/* Random m x n CSR: entry (i, j) is present with probability density, always
-   present in column dense_col, never in row skip_row or column skip_col (-1
-   disables each). Values uniform in [-0.5, 0.5). */
+/* Random m x n CSR with the given density; column dense_col is full, row
+   skip_row and column skip_col are empty (-1 disables each). */
 static CSR_matrix *csc_test_random_csr(int m, int n, double density, int dense_col,
                                        int skip_row, int skip_col)
 {
@@ -308,7 +306,7 @@ static int csc_test_csr_close(const CSR_matrix *A, const CSR_matrix *B)
     return 1;
 }
 
-/* B^T A and B^T D A (d NULL or random) by the core and by the legacy kernels. */
+/* B^T A and B^T D A, new kernels vs legacy. */
 static const char *csc_test_bta_vs_legacy(const CSR_matrix *A, const CSR_matrix *B,
                                           int with_d)
 {
@@ -329,7 +327,7 @@ static const char *csc_test_bta_vs_legacy(const CSR_matrix *A, const CSR_matrix 
     mu_assert("BTDA_fill_values: values differ from legacy",
               csc_test_csr_close(C, C_old));
 
-    /* A second fill must give the same result (acc is reused as-is). */
+    /* refill with the same acc */
     BTDA_fill_values(A, B_csc, d, acc, C);
     mu_assert("BTDA_fill_values: refill differs", csc_test_csr_close(C, C_old));
 
@@ -403,8 +401,7 @@ const char *test_gustavson_ATA_matches_legacy(void)
     return 0;
 }
 
-/* A dense column in A makes every row of C that touches it full-length; a
-   dense column in B makes one row of C the union of all of A's rows. */
+/* A dense column in A and in B. */
 const char *test_gustavson_dense_column(void)
 {
     CSR_matrix *A = csc_test_random_csr(50, 30, 0.05, 7, -1, -1);
@@ -417,9 +414,7 @@ const char *test_gustavson_dense_column(void)
     return 0;
 }
 
-/* Empty rows / columns: an empty column of B gives an empty row of C, an
-   empty row of A (and B) is never visited, an empty column of A never
-   appears in C. */
+/* Empty rows and columns, including an empty row of C. */
 const char *test_gustavson_empty_rows_and_cols(void)
 {
     CSR_matrix *A = csc_test_random_csr(30, 20, 0.1, -1, 5, 3);
@@ -482,10 +477,8 @@ static void csc_test_run_ATDA(const void *ctx)
     ATDA_matrices_fill_values(a->A, a->d, a->C);
 }
 
-/* No-alloc-in-fill contract for the sparse x sparse BTDA / ATDA fills: the
-   accumulator is bound at alloc and the operand mirrors are refreshed in
-   place. The first fill builds B's (resp. A's) CSC mirror values, so warm up
-   once before measuring. */
+/* No-alloc-in-fill contract for the sparse x sparse BTDA / ATDA fills. The
+   first fill builds the CSC mirror values, so warm up once. */
 const char *test_sparse_BTDA_ATDA_fill_no_transient_alloc(void)
 {
     matrix *A = new_sparse_matrix(csc_test_random_csr(40, 30, 0.1, 2, -1, -1));

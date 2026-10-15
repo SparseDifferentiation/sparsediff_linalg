@@ -22,10 +22,8 @@
    into sparsediff_linalg_tests, never into the library. Not part of the API.
    symBA_alloc, BA_fill_values and yTA_fill_values were the engine's quad_form /
    quad_over_lin helpers, retired by the matrix dispatchers (Q J_f as B^T A with
-   Q the transposed operand). old_ATA_alloc / old_ATDA_fill_values and
-   old_BTA_alloc / old_BTDA_fill_values are the dot-product-form sparse x sparse
-   kernels retired by the row-wise Gustavson core (src/sparse/gustavson.c); they
-   read both operands as CSC. */
+   Q the transposed operand). The old_* kernels are the dot-product sparse x
+   sparse kernels retired by the Gustavson core (src/sparse/gustavson.c). */
 
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"

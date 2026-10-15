@@ -334,8 +334,7 @@ static void BTA_spd_matrices_fill_values(const stacked_pd *B, const matrix *A,
     BTA_spd_csc_fill_values(B, sparse_csc_fresh(A), C);
 }
 
-/* Wrap a CSR produced by the sparse x sparse BTA_alloc / ATA_alloc and bind
-   the length-n accumulator their fills need (sparse_matrix.bound_dwork). */
+/* Wrap C and bind the accumulator its fill needs (bound_dwork). */
 static matrix *new_sparse_with_dwork(CSR_matrix *C_csr)
 {
     matrix *C = new_sparse_matrix(C_csr);
@@ -357,7 +356,7 @@ static matrix *BTA_sparse_matrices_alloc(const sparse_matrix *B, matrix *A)
         return BTA_csc_spd_alloc(B->csc_cache, (const stacked_pd *) A);
     }
 
-    /* A is sparse: row-wise through its CSR, no mirror of A needed. */
+    /* A is sparse */
     const sparse_matrix *sm_A = (const sparse_matrix *) A;
     return new_sparse_with_dwork(BTA_alloc(sm_A->csr, B->csc_cache));
 }

@@ -28,9 +28,8 @@ CSR_matrix *gustavson_alloc(const int *lp, const int *li, int m_out,
     int n = A->n;
     int i, j, k, ii, jj;
 
-    /* mark[j] is the last row of C in which column j was seen: stamped with i
-       in the counting pass and with m_out + i in the filling pass, so no reset
-       is needed between the two. */
+    /* mark[j]: last row of C that saw column j. Pass 2 stamps m_out + i, so no
+       reset is needed between the passes. */
     int *mark = (int *) sp_malloc(n * sizeof(int));
     int *row_nnz = (int *) sp_malloc(m_out * sizeof(int));
     for (j = 0; j < n; j++)
@@ -103,9 +102,8 @@ void gustavson_fill_values(const int *lp, const int *li, const double *lx,
 
     for (i = 0; i < C->m; i++)
     {
-        /* C's row holds exactly the union of the rows scattered below, so
-           zeroing acc at C's pattern is zeroing every position the scatter
-           touches; nothing else in acc is read. */
+        /* C's row is exactly the union scattered below, so this zeroes every
+           acc entry the scatter touches. */
         for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
         {
             acc[C->i[jj]] = 0.0;

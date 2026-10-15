@@ -44,12 +44,11 @@ typedef struct CSC_matrix
 CSC_matrix *new_CSC_matrix(int m, int n, int nnz);
 void free_CSC_matrix(CSC_matrix *matrix);
 
-/* Fill sparsity of C = B^T D A for diagonal D. A (m x n) is read row-wise as
-   CSR, B (m x p) column-wise as CSC; C is p x n with sorted rows. */
+/* Fill sparsity of C = B^T D A for diagonal D. */
 CSR_matrix *BTA_alloc(const CSR_matrix *A, const CSC_matrix *B);
 
-/* Compute values for C = B^T D A (NULL d corresponds to D as identity) into C
-   allocated by BTA_alloc. acc is a caller-owned workspace of length A->n. */
+/* Compute values for C = B^T D A (NULL d corresponds to D as identity). acc is
+   a workspace of length A->n. */
 void BTDA_fill_values(const CSR_matrix *A, const CSC_matrix *B, const double *d,
                       double *acc, CSR_matrix *C);
 

@@ -23,8 +23,7 @@
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <string.h>
 
-/* Dot-product helpers of the retired kernels (once private to
-   src/sparse/CSC_matrix.c). */
+/* Dot-product helpers of the retired kernels. */
 static inline double sparse_dot(const double *a_x, const int *a_i, int a_nnz,
                                 const double *b_x, const int *b_i, int b_nnz)
 {

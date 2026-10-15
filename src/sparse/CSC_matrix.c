@@ -190,8 +190,6 @@ void csc_to_csr_fill_values(const CSC_matrix *A, CSR_matrix *C, int *iwork)
 
 CSR_matrix *BTA_alloc(const CSR_matrix *A, const CSC_matrix *B)
 {
-    /* A is m x n, B is m x p, C = B^T A is p x n: row i of C is column i of B
-       scattered through A's rows. */
     assert(A->m == B->m);
     return gustavson_alloc(B->p, B->i, B->n, A);
 }
@@ -204,8 +202,6 @@ void BTDA_fill_values(const CSR_matrix *A, const CSC_matrix *B, const double *d,
 
 CSR_matrix *ATA_alloc(const CSC_matrix *A_csc, const CSR_matrix *A)
 {
-    /* A is m x n, A^T A is n x n: row i of C is column i of A scattered
-       through A's rows. */
     assert(A_csc->m == A->m && A_csc->n == A->n);
     return gustavson_alloc(A_csc->p, A_csc->i, A_csc->n, A);
 }
