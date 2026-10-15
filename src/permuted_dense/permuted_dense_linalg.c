@@ -279,36 +279,129 @@ static inline double sparse_dot_dense(const double *vals, const int *idxs, int l
     return sum;
 }
 
-matrix *BA_pd_csc_alloc(const permuted_dense *B, const CSC_matrix *A)
+matrix *BA_pd_csr_alloc(const permuted_dense *B, const CSR_matrix *S)
 {
-    /* Cij != 0 if row i of B overlaps with column j of A. So we loop through
-    the columns of A. For each column of A, we check if it has any nonzeros in
-    rows that are in B's col_perm. If yes, column j of C will have a nonzero
-    block corresponding to the rows of B */
-    iVec *col_perm_C = iVec_new(10);
-    for (int j = 0; j < A->n; j++)
+    /* Row r of B's block multiplies row B->col_perm[r] of S, so C's columns
+       are the union of those rows' patterns. mark[j] < 0 until column j of S
+       is seen, then its local column in C. */
+    int n0_B = B->n0;
+    int N = S->n;
+    int *mark = (int *) sp_malloc(N * sizeof(int));
+    for (int j = 0; j < N; j++)
     {
-        int start = A->p[j];
-        int len = A->p[j + 1] - start;
-        if (idxs_hits_set(A->i + start, len, B->col_inv))
+        mark[j] = -1;
+    }
+    int nnz_K = 0;
+    for (int r = 0; r < n0_B; r++)
+    {
+        int row = B->col_perm[r];
+        for (int q = S->p[row]; q < S->p[row + 1]; q++)
         {
-            iVec_append(col_perm_C, j);
+            mark[S->i[q]] = 0;
+        }
+        nnz_K += S->p[row + 1] - S->p[row];
+    }
+    int *col_perm_C = (int *) sp_malloc(N * sizeof(int));
+    int n0_C = 0;
+    for (int j = 0; j < N; j++)
+    {
+        if (mark[j] >= 0)
+        {
+            mark[j] = n0_C;
+            col_perm_C[n0_C++] = j;
         }
     }
 
-    matrix *C = new_permuted_dense(B->base.m, A->n, B->m0, col_perm_C->len,
-                                   B->row_perm, col_perm_C->data, NULL);
-    iVec_free(col_perm_C);
+    matrix *C =
+        new_permuted_dense(B->base.m, N, B->m0, n0_C, B->row_perm, col_perm_C, NULL);
+    sp_free(col_perm_C);
+
+    /* Bind the compact CSC of S[col_perm, :] to C: cp, then per entry its
+       local row r in B and its position in S->x. Entries of a compact column
+       are in ascending r, i.e. ascending global row. */
+    permuted_dense *C_pd = (permuted_dense *) C;
+    C_pd->kernel_iwork_size = (size_t) n0_C + 1 + (size_t) 2 * nnz_K;
+    C_pd->kernel_iwork = (int *) sp_malloc(C_pd->kernel_iwork_size * sizeof(int));
+    int *cp = C_pd->kernel_iwork;
+    int *rows = cp + n0_C + 1;
+    int *pos = rows + nnz_K;
+    memset(cp, 0, (n0_C + 1) * sizeof(int));
+    for (int r = 0; r < n0_B; r++)
+    {
+        int row = B->col_perm[r];
+        for (int q = S->p[row]; q < S->p[row + 1]; q++)
+        {
+            cp[mark[S->i[q]] + 1]++;
+        }
+    }
+    for (int c = 0; c < n0_C; c++)
+    {
+        cp[c + 1] += cp[c];
+    }
+    int *next = (int *) sp_malloc(n0_C * sizeof(int));
+    memcpy(next, cp, n0_C * sizeof(int));
+    for (int r = 0; r < n0_B; r++)
+    {
+        int row = B->col_perm[r];
+        for (int q = S->p[row]; q < S->p[row + 1]; q++)
+        {
+            int d = next[mark[S->i[q]]]++;
+            rows[d] = r;
+            pos[d] = q;
+        }
+    }
+    sp_free(next);
+    sp_free(mark);
+
+    permuted_dense_ensure_kernel_dwork(C_pd, (size_t) nnz_K);
     return C;
 }
 
-void BA_pd_csc_fill_values(const double *B, int n0_B, const int *inv,
-                           const CSC_matrix *A, permuted_dense *C)
+void BA_pd_csr_fill_values(const double *B, int n0_B, const CSR_matrix *S,
+                           permuted_dense *C)
 {
-    /* C[i, j] = bi^T @ ajj, where bi is the ith row of B_X (length n0_B,
-       row stride n0_B) and ajj is the jjth column of A's sparse block
-       (column jj = C->col_perm[j]). inv maps A's row indices to positions
-       in B_X (entries with inv[r] == -1 are skipped). */
+    if (C->base.nnz == 0)
+    {
+        return;
+    }
+    assert(C->kernel_iwork != NULL);
+    int n0_C = C->n0;
+    const int *cp = C->kernel_iwork;
+    int nnz_K = cp[n0_C];
+    const int *rows = cp + n0_C + 1;
+    const int *pos = rows + nnz_K;
+
+    /* Gather S's current values into compact CSC order. */
+    double *vals = C->kernel_dwork;
+    for (int d = 0; d < nnz_K; d++)
+    {
+        vals[d] = S->x[pos[d]];
+    }
+
+    /* C[i, c] = dot(row i of B, compact column c). */
+    for (int i = 0; i < C->m0; i++)
+    {
+        const double *bi = B + (size_t) i * n0_B;
+        double *ci = C->X + (size_t) i * n0_C;
+        for (int c = 0; c < n0_C; c++)
+        {
+            double acc = 0.0;
+            for (int d = cp[c]; d < cp[c + 1]; d++)
+            {
+                acc += bi[rows[d]] * vals[d];
+            }
+            ci[c] = acc;
+        }
+    }
+}
+
+void BTA_denseT_csc_fill_values(const double *BT, int m0_B, const int *row_inv,
+                                const CSC_matrix *A, permuted_dense *C)
+{
+    /* C[i, j] = bi^T @ ajj, where bi is the ith row of BT (length m0_B, row
+       stride m0_B) and ajj is the jjth column of A's sparse block (column
+       jj = C->col_perm[j]). row_inv maps A's row indices to positions in bi
+       (entries with row_inv[r] == -1 are skipped). */
 
     /* row i of C */
     for (int i = 0; i < C->m0; i++)
@@ -318,13 +411,12 @@ void BA_pd_csc_fill_values(const double *B, int n0_B, const int *inv,
         /* col j of C  */
         for (int j = 0; j < C->n0; j++)
         {
-
             int jj = C->col_perm[j];
             int start = A->p[jj];
             int len = A->p[jj + 1] - start;
             /* we compute entry C[i, j] */
-            ci[j] =
-                sparse_dot_dense(A->x + start, A->i + start, len, inv, B + i * n0_B);
+            ci[j] = sparse_dot_dense(A->x + start, A->i + start, len, row_inv,
+                                     BT + i * m0_B);
         }
     }
 }
@@ -452,7 +544,7 @@ void BTA_pd_csc_fill_values(const permuted_dense *B, const CSC_matrix *A,
     }
 
     A_transpose(B->kernel_dwork, B->X, B->m0, B->n0);
-    BA_pd_csc_fill_values(B->kernel_dwork, B->m0, B->row_inv, A, C);
+    BTA_denseT_csc_fill_values(B->kernel_dwork, B->m0, B->row_inv, A, C);
 }
 
 /* C = B^T diag(d) A = (diag (d) B)^T A */
@@ -478,7 +570,7 @@ void BTDA_pd_csc_fill_values(const permuted_dense *B, const double *d,
         }
     }
 
-    BA_pd_csc_fill_values(B->kernel_dwork, m0, B->row_inv, A, C);
+    BTA_denseT_csc_fill_values(B->kernel_dwork, m0, B->row_inv, A, C);
 }
 
 matrix *BTA_csc_pd_alloc(const CSC_matrix *B, const permuted_dense *A)
@@ -512,7 +604,7 @@ matrix *BTA_csc_pd_alloc(const CSC_matrix *B, const permuted_dense *A)
 /* Internal core for BTA_csc_pd_fill_values / BTDA_csc_pd_fill_values: C = B^T @ A
    where B is CSC and the right operand A is supplied as a transposed-layout raw
    buffer (row j of A_T = m0_A contiguous doubles = the j-th column of A's dense
-   block). Transposed-output sibling of BA_pd_csc_fill_values. */
+   block). Transposed-output sibling of BTA_denseT_csc_fill_values. */
 static void BTA_csc_denseT_fill_values(const CSC_matrix *B, const double *A_T,
                                        int m0_A, const int *inv, permuted_dense *C)
 {
@@ -550,7 +642,7 @@ void BTA_csc_pd_fill_values(const CSC_matrix *B, const permuted_dense *A,
 /* C = B^T diag(d) A. Folds diag(d) into A's dense block (writing
    (diag(d_perm) X_A)^T into A->kernel_dwork) and delegates to
    BTA_csc_denseT_fill_values. Mirrors how BTDA_pd_csc_fill_values wraps
-   BA_pd_csc_fill_values. */
+   BTA_denseT_csc_fill_values. */
 void BTDA_csc_pd_fill_values(const CSC_matrix *B, const double *d,
                              const permuted_dense *A, permuted_dense *C)
 {
@@ -580,7 +672,7 @@ void BTDA_csc_pd_fill_values(const CSC_matrix *B, const double *d,
 
 /* Original transpose-via-Cprime implementation of BTDA_csc_pd_fill_values.
    No longer linked; preserved here as in-file reference for the math
-   identity C = (A^T diag(d) B)^T and the BA_pd_csc_fill_values delegation. */
+   identity C = (A^T diag(d) B)^T and the BTA_denseT_csc_fill_values delegation. */
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((unused))
 #endif

@@ -67,10 +67,9 @@ static matrix *dense_kron_alloc(const matrix *A_m, int p, matrix *J,
     {
         return BA_dense_kron_spd_alloc(A, p, (const stacked_pd *) J, layout);
     }
-    /* J is sparse */
-    sparse_matrix *sm_J = (sparse_matrix *) J;
-    sparse_matrix_ensure_csc_cache(sm_J);
-    return BA_dense_kron_csc_alloc(A, p, sm_J->csc_cache, layout);
+    /* J is sparse: the per-block kernel binds the rows of J's CSR it needs
+       to each output block, so no CSC mirror is built for this path. */
+    return BA_dense_kron_csr_alloc(A, p, ((const sparse_matrix *) J)->csr, layout);
 }
 
 static void dense_kron_fill_values(const matrix *A_m, int p, const matrix *J,
@@ -93,7 +92,8 @@ static void dense_kron_fill_values(const matrix *A_m, int p, const matrix *J,
     else
     {
         /* J is sparse */
-        BA_dense_kron_csc_fill_values(A, p, sparse_csc_fresh(J), C, layout);
+        BA_dense_kron_csr_fill_values(A, p, ((const sparse_matrix *) J)->csr, C,
+                                      layout);
     }
     matrix_values_changed(&C->base);
 }

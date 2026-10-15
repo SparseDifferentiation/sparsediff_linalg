@@ -25,7 +25,7 @@
 #include <stdlib.h>
 
 // ====================================================================================
-// All three BA_dense_kron_{pd,csc,spd}_* pairs share the same blockwise skeleton:
+// All three BA_dense_kron_{pd,csr,spd}_* pairs share the same blockwise skeleton:
 //
 //   1. At alloc, build a persistent permuted_dense "state" (the scratch view of
 //      kron(I_p, A), or its transpose BT for the spd kernel).
@@ -36,7 +36,7 @@
 //   4. At fill, read state from C->kernel_pd_scratch (plus any kernel-specific
 //      value refresh) and run the per-output-block loop.
 //
-// The state for pd/csc is the scratch (kron_scratch_init); for spd it is the
+// The state for pd/csr is the scratch (kron_scratch_init); for spd it is the
 // transposed scratch BT (kron_BT_alloc). One set_block function works for
 // both because under the "full A" contract, kron_scratch_set_block's col_inv
 // writes stay within bounds even for BT's transposed shape.
@@ -99,7 +99,7 @@ static void kron_clear_col_inv(permuted_dense *state)
 
 /* Mutate the state to represent kron block k of kron(I_p, A): refresh row_perm,
    col_perm and col_inv. O(m + n) work. row_inv is left stale — no per-block
-   kernel reads it. Works on both scratch (pd/csc) and BT (spd) under the "full
+   kernel reads it. Works on both scratch (pd/csr) and BT (spd) under the "full
    A" contract. */
 static void kron_set_block_I_A(permuted_dense *state, int k, int p)
 {
@@ -246,36 +246,37 @@ void BA_dense_kron_pd_fill_values(const permuted_dense *A, int p,
     kron_fill_blockwise(C, p, layout, kron_pd_fill_op, J);
 }
 
-/* csc: state is the (untransposed) scratch; BA_pd_csc_* reads col_inv. */
-static matrix *kron_csc_alloc_op(permuted_dense *state, const void *ctx)
+/* csr: state is the (untransposed) scratch. BA_pd_csr_alloc reads the
+   scratch's col_perm for the block being allocated and binds the matching
+   rows of J to Ck, so the fill needs only the scratch's X (aliasing A->X). */
+static matrix *kron_csr_alloc_op(permuted_dense *state, const void *ctx)
 {
-    return BA_pd_csc_alloc(state, (const CSC_matrix *) ctx);
+    return BA_pd_csr_alloc(state, (const CSR_matrix *) ctx);
 }
-static void kron_csc_fill_op(permuted_dense *state, const void *ctx,
+static void kron_csr_fill_op(permuted_dense *state, const void *ctx,
                              permuted_dense *Ck)
 {
-    BA_pd_csc_fill_values(state->X, state->n0, state->col_inv,
-                          (const CSC_matrix *) ctx, Ck);
+    BA_pd_csr_fill_values(state->X, state->n0, (const CSR_matrix *) ctx, Ck);
 }
 
-matrix *BA_dense_kron_csc_alloc(const permuted_dense *A, int p, const CSC_matrix *J,
+matrix *BA_dense_kron_csr_alloc(const permuted_dense *A, int p, const CSR_matrix *J,
                                 kron_layout layout)
 {
     permuted_dense *scratch = kron_scratch_init(A, p);
     return kron_alloc_blockwise(scratch, p, layout, A->m0 * p, J->n,
-                                kron_csc_alloc_op, J);
+                                kron_csr_alloc_op, J);
 }
 
-void BA_dense_kron_csc_fill_values(const permuted_dense *A, int p,
-                                   const CSC_matrix *J, stacked_pd *C,
+void BA_dense_kron_csr_fill_values(const permuted_dense *A, int p,
+                                   const CSR_matrix *J, stacked_pd *C,
                                    kron_layout layout)
 {
     (void) A;
-    kron_fill_blockwise(C, p, layout, kron_csc_fill_op, J);
+    kron_fill_blockwise(C, p, layout, kron_csr_fill_op, J);
 }
 
 /* spd: state is the transposed scratch BT. BT.X needs to be refreshed each
-   fill call (A's values may have changed); pd/csc don't, since their state's
+   fill call (A's values may have changed); pd/csr don't, since their state's
    X aliases A->X. */
 static matrix *kron_spd_alloc_op(permuted_dense *state, const void *ctx)
 {

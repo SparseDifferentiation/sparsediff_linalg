@@ -20,6 +20,7 @@
 
 #include "internal/permuted_dense.h"
 #include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 
 /* Fill values of C = diag(d) @ A where len(d) = number of (global) rows of A */
 void DA_pd_fill_values(const double *d, const permuted_dense *A, permuted_dense *C);
@@ -43,16 +44,29 @@ void BTA_pd_pd_fill_values(const permuted_dense *B, const permuted_dense *A,
 void BTDA_pd_pd_fill_values(const permuted_dense *B, const double *d,
                             const permuted_dense *A, permuted_dense *C);
 
-/* Allocate new permuted dense for C = B @ A where B is PD and A is CSC. */
-matrix *BA_pd_csc_alloc(const permuted_dense *B, const CSC_matrix *A);
+/* Allocate C = B @ S where B is PD and S is CSR. Extracts the rows of S
+   selected by B->col_perm (as of this call), re-indexes them to C's local
+   columns and binds them to C as a compact CSC:
+     C->kernel_iwork = [cp (C->n0 + 1) | rows (nnz_K) | pos (nnz_K)]
+   with rows the local column r of B and pos the index into S->x, and
+   C->kernel_dwork sized for the nnz_K values the fill gathers. B's col_perm is
+   read here only, so a caller may reuse one mutable B for several allocs. */
+matrix *BA_pd_csr_alloc(const permuted_dense *B, const CSR_matrix *S);
 
-/* Fill values of C = B @ A where B is value buffer to permuted dense and A is CSC.
+/* Fill values of C = B @ S where B is a raw row-major (C->m0 x n0_B) value
+   buffer and S is the CSR BA_pd_csr_alloc saw (same pattern, any values).
+   Reads the state bound to C; allocates nothing. The raw-buffer signature lets
+   callers pass another block's X with the same n0 (stacked_pd, dense kron). */
+void BA_pd_csr_fill_values(const double *B, int n0_B, const CSR_matrix *S,
+                           permuted_dense *C);
 
-   The raw-buffer signature for B lets callers pass a transposed dense block
-   (e.g. (diag(d) B)^T stored in B->dwork) without needing to build a transposed
-   permuted dense. */
-void BA_pd_csc_fill_values(const double *B, int n0_B, const int *inv,
-                           const CSC_matrix *A, permuted_dense *C);
+/* Fill values of C = B^T @ A where B^T is supplied as a raw row-major (n0_B x
+   m0_B) buffer and A is CSC. row_inv maps A's row indices to columns of the
+   buffer (entries with row_inv[r] == -1 are skipped). Sparse-dense dot form;
+   used by the BTA_pd_csc path, whose callers pass (diag(d) B)^T from
+   B->kernel_dwork or B's transpose cache. */
+void BTA_denseT_csc_fill_values(const double *BT, int m0_B, const int *row_inv,
+                                const CSC_matrix *A, permuted_dense *C);
 
 /* Allocate new permuted dense for C = B @ A where B and A are both PD */
 matrix *BA_pd_pd_alloc(const permuted_dense *B, const permuted_dense *A);

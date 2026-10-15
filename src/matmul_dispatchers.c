@@ -121,10 +121,9 @@ static matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
         return BA_pd_spd_alloc(B, (const stacked_pd *) A);
     }
 
-    /* A is sparse */
-    sparse_matrix *sm_A = (sparse_matrix *) A;
-    sparse_matrix_ensure_csc_cache(sm_A);
-    return BA_pd_csc_alloc(B, sm_A->csc_cache);
+    /* A is sparse: the kernel binds the rows of A's CSR it needs to C, so no
+       CSC mirror is built for this path. */
+    return BA_pd_csr_alloc(B, ((const sparse_matrix *) A)->csr);
 }
 
 static void BA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
@@ -142,7 +141,7 @@ static void BA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A,
     }
 
     /* A is sparse */
-    BA_pd_csc_fill_values(B->X, B->n0, B->col_inv, sparse_csc_fresh(A), C);
+    BA_pd_csr_fill_values(B->X, B->n0, ((const sparse_matrix *) A)->csr, C);
 }
 
 /* CSR_matrix and CSC_matrix are the same struct, so the CSC reading of a CSR's
@@ -278,7 +277,7 @@ static void BTA_pd_matrices_fill_values(const permuted_dense *B, const matrix *A
     /* A is sparse: read B^T from B's transpose cache, refreshed only when B's
        values moved, instead of re-transposing B's block on every fill. */
     const permuted_dense *BT = permuted_dense_transpose_fresh(B);
-    BA_pd_csc_fill_values(BT->X, B->m0, B->row_inv, sparse_csc_fresh(A), C);
+    BTA_denseT_csc_fill_values(BT->X, B->m0, B->row_inv, sparse_csc_fresh(A), C);
 }
 
 static matrix *BTA_spd_matrices_alloc(const stacked_pd *B, matrix *A)

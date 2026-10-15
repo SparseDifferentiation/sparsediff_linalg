@@ -38,11 +38,12 @@ typedef enum
     KRON_A_I  /* kron(A, I_p) */
 } kron_layout;
 
-/* J is CSC. */
-matrix *BA_dense_kron_csc_alloc(const permuted_dense *A, int p, const CSC_matrix *J,
+/* J is CSR. The fill reads J's values in place through the state
+   BA_dense_kron_csr_alloc bound to each block of C; no CSC mirror of J. */
+matrix *BA_dense_kron_csr_alloc(const permuted_dense *A, int p, const CSR_matrix *J,
                                 kron_layout layout);
-void BA_dense_kron_csc_fill_values(const permuted_dense *A, int p,
-                                   const CSC_matrix *J, stacked_pd *C,
+void BA_dense_kron_csr_fill_values(const permuted_dense *A, int p,
+                                   const CSR_matrix *J, stacked_pd *C,
                                    kron_layout layout);
 
 /* J is permuted_dense. */

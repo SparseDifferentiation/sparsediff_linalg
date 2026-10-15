@@ -1383,14 +1383,14 @@ const char *test_spd_vtable_row_gather(void)
 
 /* ---------------------------------------------------------------- */
 /* BA_spd_* primitive tests: C = B @ A where B is stacked_pd and A is */
-/* CSC / PD / spd. Kept as siblings of the BTA_spd_* family in the    */
+/* CSR / PD / spd. Kept as siblings of the BTA_spd_* family in the    */
 /* main code (see stacked_pd_linalg.h). Not exercised by any          */
 /* production atom today; kept for API symmetry and future use.       */
 /* ---------------------------------------------------------------- */
 
-/* B is 4x4 spd with two blocks; A is 4x3 CSC chosen so every block of B
+/* B is 4x4 spd with two blocks; A is 4x3 CSR chosen so every block of B
    produces a nonempty result. Result spd should keep both source blocks. */
-const char *test_BA_spd_csc_two_blocks_both_kept(void)
+const char *test_BA_spd_csr_two_blocks_both_kept(void)
 {
     /* block 0: rows {0, 1}, cols {0, 2}, X = [[1, 2], [3, 4]]
        block 1: rows {3},    cols {1, 3}, X = [5, 6]                    */
@@ -1407,22 +1407,23 @@ const char *test_BA_spd_csc_two_blocks_both_kept(void)
     permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
     matrix *B_m = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
 
-    /* A: 4x3 CSC.
-       col 0: (row 0, 1), (row 2, 2)
-       col 1: (row 1, 3), (row 3, 4)
-       col 2: (row 2, 5)
+    /* A: 4x3 CSR.
+       row 0: (col 0, 1)
+       row 1: (col 1, 3)
+       row 2: (col 0, 2), (col 2, 5)
+       row 3: (col 1, 4)
        For block 0 (col_perm {0, 2}): cols 0 and 2 of A hit -> C0 cols {0, 2}.
        For block 1 (col_perm {1, 3}): only col 1 of A hits -> C1 cols {1}. */
-    CSC_matrix *A = new_CSC_matrix(4, 3, 5);
-    int Ap[4] = {0, 2, 4, 5};
-    int Ai[5] = {0, 2, 1, 3, 2};
-    double Ax[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    CSR_matrix *A = new_CSR_matrix(4, 3, 5);
+    int Ap[5] = {0, 1, 2, 4, 5};
+    int Ai[5] = {0, 1, 0, 2, 1};
+    double Ax[5] = {1.0, 3.0, 2.0, 5.0, 4.0};
     memcpy(A->p, Ap, sizeof(Ap));
     memcpy(A->i, Ai, sizeof(Ai));
     memcpy(A->x, Ax, sizeof(Ax));
 
-    matrix *C_m = BA_spd_csc_alloc((stacked_pd *) B_m, A);
-    BA_spd_csc_fill_values((stacked_pd *) B_m, A, (stacked_pd *) C_m);
+    matrix *C_m = BA_spd_csr_alloc((stacked_pd *) B_m, A);
+    BA_spd_csr_fill_values((stacked_pd *) B_m, A, (stacked_pd *) C_m);
     stacked_pd *C = (stacked_pd *) C_m;
 
     mu_assert("C m", C_m->m == 4);
@@ -1454,11 +1455,11 @@ const char *test_BA_spd_csc_two_blocks_both_kept(void)
 
     free_matrix(C_m);
     free_matrix(B_m);
-    free_CSC_matrix(A);
+    free_CSR_matrix(A);
     return 0;
 }
 
-const char *test_BA_spd_csc_one_block_dropped(void)
+const char *test_BA_spd_csr_one_block_dropped(void)
 {
     int row_perm_0[2] = {0, 1};
     int col_perm_0[2] = {0, 2};
@@ -1473,16 +1474,17 @@ const char *test_BA_spd_csc_one_block_dropped(void)
     permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
     matrix *B_m = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
 
-    CSC_matrix *A = new_CSC_matrix(4, 2, 4);
-    int Ap[3] = {0, 2, 4};
-    int Ai[4] = {0, 2, 0, 2};
-    double Ax[4] = {1.0, 2.0, 3.0, 4.0};
+    /* A: 4x2 CSR, rows 0:{(0,1),(1,3)} 2:{(0,2),(1,4)}; rows 1, 3 empty. */
+    CSR_matrix *A = new_CSR_matrix(4, 2, 4);
+    int Ap[5] = {0, 2, 2, 4, 4};
+    int Ai[4] = {0, 1, 0, 1};
+    double Ax[4] = {1.0, 3.0, 2.0, 4.0};
     memcpy(A->p, Ap, sizeof(Ap));
     memcpy(A->i, Ai, sizeof(Ai));
     memcpy(A->x, Ax, sizeof(Ax));
 
-    matrix *C_m = BA_spd_csc_alloc((stacked_pd *) B_m, A);
-    BA_spd_csc_fill_values((stacked_pd *) B_m, A, (stacked_pd *) C_m);
+    matrix *C_m = BA_spd_csr_alloc((stacked_pd *) B_m, A);
+    BA_spd_csr_fill_values((stacked_pd *) B_m, A, (stacked_pd *) C_m);
     stacked_pd *C = (stacked_pd *) C_m;
 
     mu_assert("n_blocks", C->n_blocks == 1);
@@ -1500,11 +1502,11 @@ const char *test_BA_spd_csc_one_block_dropped(void)
 
     free_matrix(C_m);
     free_matrix(B_m);
-    free_CSC_matrix(A);
+    free_CSR_matrix(A);
     return 0;
 }
 
-const char *test_BA_spd_csc_all_blocks_dropped(void)
+const char *test_BA_spd_csr_all_blocks_dropped(void)
 {
     int row_perm_0[1] = {0};
     int col_perm_0[1] = {0};
@@ -1519,14 +1521,15 @@ const char *test_BA_spd_csc_all_blocks_dropped(void)
     permuted_dense *blocks[2] = {(permuted_dense *) blk0, (permuted_dense *) blk1};
     matrix *B_m = new_stacked_pd(4, 4, 2, blocks, NULL, NULL);
 
-    CSC_matrix *A = new_CSC_matrix(4, 1, 1);
-    A->p[0] = 0;
-    A->p[1] = 1;
-    A->i[0] = 1;
+    /* A: 4x1 CSR with its only nonzero in row 1, outside both col_perms. */
+    CSR_matrix *A = new_CSR_matrix(4, 1, 1);
+    int Ap[5] = {0, 0, 1, 1, 1};
+    memcpy(A->p, Ap, sizeof(Ap));
+    A->i[0] = 0;
     A->x[0] = 7.0;
 
-    matrix *C_m = BA_spd_csc_alloc((stacked_pd *) B_m, A);
-    BA_spd_csc_fill_values((stacked_pd *) B_m, A, (stacked_pd *) C_m);
+    matrix *C_m = BA_spd_csr_alloc((stacked_pd *) B_m, A);
+    BA_spd_csr_fill_values((stacked_pd *) B_m, A, (stacked_pd *) C_m);
     stacked_pd *C = (stacked_pd *) C_m;
 
     mu_assert("C m", C_m->m == 4);
@@ -1536,7 +1539,7 @@ const char *test_BA_spd_csc_all_blocks_dropped(void)
 
     free_matrix(C_m);
     free_matrix(B_m);
-    free_CSC_matrix(A);
+    free_CSR_matrix(A);
     return 0;
 }
 
