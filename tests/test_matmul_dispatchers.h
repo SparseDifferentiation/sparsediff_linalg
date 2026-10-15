@@ -1502,7 +1502,7 @@ const char *test_BTA_spd_matrices_spd_A(void)
 
 /* BA_spd_matrices dispatcher tests previously lived here. The dispatcher
    is now static inside matmul_dispatchers.c (no production caller, no public
-   API). The underlying primitives BA_spd_csc_*, BA_spd_pd_*, BA_spd_spd_*
+   API). The underlying primitives BA_spd_csr_*, BA_spd_pd_*, BA_spd_spd_*
    are tested directly in tests/utils/test_stacked_pd.h. */
 
 /* BTA_pd_matrices dispatcher: A is permuted_dense. Verifies the PD-branch
@@ -2238,7 +2238,7 @@ const char *test_BTA_matrices_fill_csc_csc(void)
    BA_dense_kron_spd bypasses the wrapper and calls BTA_pd_spd_*
    directly on its mutating scratch (see stacked_pd_linalg.c). The
    reference path runs the same dispatch with J flattened to
-   sparse_matrix (which routes via BA_dense_kron_csc, no transpose-cache
+   sparse_matrix (which routes via BA_dense_kron_csr, no transpose-cache
    involvement); we compare via to_csr. */
 const char *test_BA_pd_kron_spd_no_cache_staleness(void)
 {
@@ -2274,7 +2274,7 @@ const char *test_BA_pd_kron_spd_no_cache_staleness(void)
     matrix *C_spd = BA_dense_kron_matrices_alloc(A, p, J_spd);
     BA_dense_kron_matrices_fill_values(A, p, J_spd, C_spd);
 
-    /* Route 2: sparse path via spd_to_sparse_matrix_copy + BA_dense_kron_csc. */
+    /* Route 2: sparse path via spd_to_sparse_matrix_copy + BA_dense_kron_csr. */
     matrix *J_sparse = spd_to_sparse_matrix_copy(J_spd);
     matrix *C_ref = BA_dense_kron_matrices_alloc(A, p, J_sparse);
     BA_dense_kron_matrices_fill_values(A, p, J_sparse, C_ref);

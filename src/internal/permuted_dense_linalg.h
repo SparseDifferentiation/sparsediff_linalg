@@ -20,6 +20,7 @@
 
 #include "internal/permuted_dense.h"
 #include "sparsediff_linalg/CSC_matrix.h"
+#include "sparsediff_linalg/CSR_matrix.h"
 
 /* Fill values of C = diag(d) @ A where len(d) = number of (global) rows of A */
 void DA_pd_fill_values(const double *d, const permuted_dense *A, permuted_dense *C);
@@ -43,16 +44,19 @@ void BTA_pd_pd_fill_values(const permuted_dense *B, const permuted_dense *A,
 void BTDA_pd_pd_fill_values(const permuted_dense *B, const double *d,
                             const permuted_dense *A, permuted_dense *C);
 
-/* Allocate new permuted dense for C = B @ A where B is PD and A is CSC. */
-matrix *BA_pd_csc_alloc(const permuted_dense *B, const CSC_matrix *A);
+/* Allocate new permuted dense for C = B @ S where B is PD and S is CSR. Binds
+   the compact CSC of S[B->col_perm, :] to C (kernel_iwork, kernel_dwork). */
+matrix *BA_pd_csr_alloc(const permuted_dense *B, const CSR_matrix *S);
 
-/* Fill values of C = B @ A where B is value buffer to permuted dense and A is CSC.
+/* Fill values of C = B @ S where B is value buffer to permuted dense and S is
+   CSR. */
+void BA_pd_csr_fill_values(const double *B, int n0_B, const CSR_matrix *S,
+                           permuted_dense *C);
 
-   The raw-buffer signature for B lets callers pass a transposed dense block
-   (e.g. (diag(d) B)^T stored in B->dwork) without needing to build a transposed
-   permuted dense. */
-void BA_pd_csc_fill_values(const double *B, int n0_B, const int *inv,
-                           const CSC_matrix *A, permuted_dense *C);
+/* Fill values of C = B^T @ A where B^T is value buffer to permuted dense and A
+   is CSC (row_inv[r] == -1 entries of A are skipped). */
+void BTA_denseT_csc_fill_values(const double *BT, int m0_B, const int *row_inv,
+                                const CSC_matrix *A, permuted_dense *C);
 
 /* Allocate new permuted dense for C = B @ A where B and A are both PD */
 matrix *BA_pd_pd_alloc(const permuted_dense *B, const permuted_dense *A);

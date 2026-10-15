@@ -86,8 +86,9 @@ int main(void)
     mu_run_test(test_DA_pd_fill_values, tests_run);
     mu_run_test(test_ATA_pd_alloc, tests_run);
     mu_run_test(test_ATDA_pd_fill_values, tests_run);
-    mu_run_test(test_permuted_dense_times_csc, tests_run);
-    mu_run_test(test_permuted_dense_times_csc_no_active, tests_run);
+    mu_run_test(test_permuted_dense_times_csr, tests_run);
+    mu_run_test(test_permuted_dense_times_csr_no_active, tests_run);
+    mu_run_test(test_permuted_dense_times_csr_m0_remainder, tests_run);
     mu_run_test(test_permuted_dense_to_csr_lazy, tests_run);
     mu_run_test(test_permuted_dense_col_inv, tests_run);
     mu_run_test(test_permuted_dense_row_gather, tests_run);
@@ -119,9 +120,9 @@ int main(void)
     mu_run_test(test_BA_pd_matrices_pd_csc, tests_run);
     mu_run_test(test_BA_pd_matrices_spd_A, tests_run);
     mu_run_test(test_BA_pd_matrices_fast_path, tests_run);
-    mu_run_test(test_BA_spd_csc_two_blocks_both_kept, tests_run);
-    mu_run_test(test_BA_spd_csc_one_block_dropped, tests_run);
-    mu_run_test(test_BA_spd_csc_all_blocks_dropped, tests_run);
+    mu_run_test(test_BA_spd_csr_two_blocks_both_kept, tests_run);
+    mu_run_test(test_BA_spd_csr_one_block_dropped, tests_run);
+    mu_run_test(test_BA_spd_csr_all_blocks_dropped, tests_run);
     mu_run_test(test_BA_spd_pd_two_blocks_both_kept, tests_run);
     mu_run_test(test_BA_spd_pd_one_block_dropped, tests_run);
     mu_run_test(test_BA_spd_spd_two_blocks_both_kept, tests_run);

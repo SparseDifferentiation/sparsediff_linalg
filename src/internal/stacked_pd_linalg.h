@@ -123,11 +123,11 @@ void BTA_csc_spd_fill_values(const CSC_matrix *B, const stacked_pd *A,
 void BTDA_csc_spd_fill_values(const CSC_matrix *B, const double *d,
                               const stacked_pd *A, stacked_pd *C);
 
-/* Allocate C = B @ A where B is spd, A is CSC. Not used in production. */
-matrix *BA_spd_csc_alloc(const stacked_pd *B, const CSC_matrix *A);
+/* Allocate C = B @ S where B is spd, S is CSR. Not used in production. */
+matrix *BA_spd_csr_alloc(const stacked_pd *B, const CSR_matrix *S);
 
-/* Fill values of C = B @ A where B is spd and A is CSC. Not used in production. */
-void BA_spd_csc_fill_values(const stacked_pd *B, const CSC_matrix *A, stacked_pd *C);
+/* Fill values of C = B @ S where B is spd and S is CSR. Not used in production. */
+void BA_spd_csr_fill_values(const stacked_pd *B, const CSR_matrix *S, stacked_pd *C);
 
 /* Allocate sparsity for C = B @ A where B is spd and A is permuted_dense. Not
  * used in production. */

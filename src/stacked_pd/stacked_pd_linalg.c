@@ -637,7 +637,7 @@ void BA_pd_spd_fill_values(const permuted_dense *B, const stacked_pd *A,
 }
 
 // ====================================================================================
-// "B is stacked_pd on the LEFT" BA kernels: C = B @ A for A in {CSC, PD, spd}.
+// "B is stacked_pd on the LEFT" BA kernels: C = B @ A for A in {CSR, PD, spd}.
 // Output is always stacked_pd, with each output block = B_k @ A. Because B's
 // blocks have disjoint row_perms (spd invariant) and the output rows come
 // directly from B's rows, the output's blocks are also disjoint by construction
@@ -649,24 +649,24 @@ void BA_pd_spd_fill_values(const permuted_dense *B, const stacked_pd *A,
 // family for API symmetry and because BA_spd_matrices is the natural counterpart
 // to BTA_spd_matrices. Cost of carrying them is small.
 // ====================================================================================
-static matrix *wrapper_BA_pd_csc(permuted_dense *Bk, const void *ctx)
+static matrix *wrapper_BA_pd_csr(permuted_dense *Bk, const void *ctx)
 {
-    return BA_pd_csc_alloc(Bk, (const CSC_matrix *) ctx);
+    return BA_pd_csr_alloc(Bk, (const CSR_matrix *) ctx);
 }
 
-matrix *BA_spd_csc_alloc(const stacked_pd *B, const CSC_matrix *A)
+matrix *BA_spd_csr_alloc(const stacked_pd *B, const CSR_matrix *S)
 {
-    return spd_map_filter_blocks(B, B->base.m, A->n, wrapper_BA_pd_csc, A);
+    return spd_map_filter_blocks(B, B->base.m, S->n, wrapper_BA_pd_csr, S);
 }
 
-void BA_spd_csc_fill_values(const stacked_pd *B, const CSC_matrix *A, stacked_pd *C)
+void BA_spd_csr_fill_values(const stacked_pd *B, const CSR_matrix *S, stacked_pd *C)
 {
     for (int k = 0; k < C->n_blocks; k++)
     {
         /* Bq is the block in B that contributes to Ck */
         int q = C->src_block_idx[C->src_block_idx_p[k]];
         const permuted_dense *Bq = B->blocks[q];
-        BA_pd_csc_fill_values(Bq->X, Bq->n0, Bq->col_inv, A, C->blocks[k]);
+        BA_pd_csr_fill_values(Bq->X, Bq->n0, S, C->blocks[k]);
     }
 }
 

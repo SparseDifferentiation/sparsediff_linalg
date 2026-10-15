@@ -214,14 +214,14 @@ const char *test_ATDA_pd_fill_values(void)
     return 0;
 }
 
-/* PD x CSC_matrix: J is 6x4. col 0 empty; col 1 has rows {0,3} (vals 10, 20);
+/* PD x CSR_matrix: J is 6x4. col 0 empty; col 1 has rows {0,3} (vals 10, 20);
    col 2 has row {2} (val 30, but row 2 not in col_perm_self = {0,3} so col 2
    is INACTIVE); col 3 has row {3} (val 40). Active cols: {1, 3}.
 
    Expected: m0=3, n0=2, row_perm={1,2,4}, col_perm={1,3}.
    Values: out.X[:,0] = 10*[1,3,5] + 20*[2,4,6] = [50,110,170],
            out.X[:,1] = 40*[2,4,6] = [80,160,240]. */
-const char *test_permuted_dense_times_csc(void)
+const char *test_permuted_dense_times_csr(void)
 {
     int row_perm[3] = {1, 2, 4};
     int col_perm[2] = {0, 3};
@@ -229,17 +229,18 @@ const char *test_permuted_dense_times_csc(void)
     matrix *M = new_permuted_dense(5, 6, 3, 2, row_perm, col_perm, X);
     permuted_dense *pd = (permuted_dense *) M;
 
-    CSC_matrix *J = new_CSC_matrix(6, 4, 4);
-    int Jp[5] = {0, 0, 2, 3, 4};
-    int Ji[4] = {0, 3, 2, 3};
-    double Jx[4] = {10.0, 20.0, 30.0, 40.0};
-    memcpy(J->p, Jp, 5 * sizeof(int));
+    /* Rows: 0:{(1,10)} 2:{(2,30)} 3:{(1,20),(3,40)}. */
+    CSR_matrix *J = new_CSR_matrix(6, 4, 4);
+    int Jp[7] = {0, 1, 1, 2, 4, 4, 4};
+    int Ji[4] = {1, 2, 1, 3};
+    double Jx[4] = {10.0, 30.0, 20.0, 40.0};
+    memcpy(J->p, Jp, 7 * sizeof(int));
     memcpy(J->i, Ji, 4 * sizeof(int));
     memcpy(J->x, Jx, 4 * sizeof(double));
 
-    matrix *M_out = BA_pd_csc_alloc(pd, J);
+    matrix *M_out = BA_pd_csr_alloc(pd, J);
     permuted_dense *pd_out = (permuted_dense *) M_out;
-    BA_pd_csc_fill_values(pd->X, pd->n0, pd->col_inv, J, pd_out);
+    BA_pd_csr_fill_values(pd->X, pd->n0, J, pd_out);
 
     int row_perm_expected[3] = {1, 2, 4};
     int col_perm_expected[2] = {1, 3};
@@ -255,13 +256,13 @@ const char *test_permuted_dense_times_csc(void)
 
     free_matrix(M);
     free_matrix(M_out);
-    free_CSC_matrix(J);
+    free_CSR_matrix(J);
     return 0;
 }
 
-/* PD x CSC_matrix edge case: every column of J has its only nonzero outside
+/* PD x CSR_matrix edge case: every column of J has its only nonzero outside
    col_perm_self, so col_perm_out is empty (n0 = 0). */
-const char *test_permuted_dense_times_csc_no_active(void)
+const char *test_permuted_dense_times_csr_no_active(void)
 {
     int row_perm[3] = {1, 2, 4};
     int col_perm[2] = {0, 3};
@@ -269,18 +270,18 @@ const char *test_permuted_dense_times_csc_no_active(void)
     matrix *M = new_permuted_dense(5, 6, 3, 2, row_perm, col_perm, X);
     permuted_dense *pd = (permuted_dense *) M;
 
-    /* J: col 0 has row {1}, col 1 has row {5}. Neither in col_perm_self. */
-    CSC_matrix *J = new_CSC_matrix(6, 2, 2);
-    int Jp[3] = {0, 1, 2};
-    int Ji[2] = {1, 5};
+    /* J: row 1 has col {0}, row 5 has col {1}. Neither row in col_perm_self. */
+    CSR_matrix *J = new_CSR_matrix(6, 2, 2);
+    int Jp[7] = {0, 0, 1, 1, 1, 1, 2};
+    int Ji[2] = {0, 1};
     double Jx[2] = {100.0, 200.0};
-    memcpy(J->p, Jp, 3 * sizeof(int));
+    memcpy(J->p, Jp, 7 * sizeof(int));
     memcpy(J->i, Ji, 2 * sizeof(int));
     memcpy(J->x, Jx, 2 * sizeof(double));
 
-    matrix *M_out = BA_pd_csc_alloc(pd, J);
+    matrix *M_out = BA_pd_csr_alloc(pd, J);
     permuted_dense *pd_out = (permuted_dense *) M_out;
-    BA_pd_csc_fill_values(pd->X, pd->n0, pd->col_inv, J, pd_out);
+    BA_pd_csr_fill_values(pd->X, pd->n0, J, pd_out);
 
     mu_assert("m", M_out->m == 5);
     mu_assert("n", M_out->n == 2);
@@ -289,7 +290,63 @@ const char *test_permuted_dense_times_csc_no_active(void)
 
     free_matrix(M);
     free_matrix(M_out);
-    free_CSC_matrix(J);
+    free_CSR_matrix(J);
+    return 0;
+}
+
+/* PD x sparse with m0 = 7 (not a multiple of 4) against a random S. Oracle:
+   B flattened to sparse_matrix, sparse x sparse dispatch. Round 2 mutates S's
+   values and refills. */
+const char *test_permuted_dense_times_csr_m0_remainder(void)
+{
+    srand(20261015);
+    int row_perm[7] = {0, 1, 3, 4, 6, 7, 9};
+    int col_perm[5] = {1, 2, 5, 8, 11};
+    double X[35];
+    for (int k = 0; k < 35; k++)
+    {
+        X[k] = 0.25 * (k + 1) - 3.0;
+    }
+    matrix *B_m = new_permuted_dense(10, 12, 7, 5, row_perm, col_perm, X);
+    matrix *S_m = new_sparse_matrix(new_csr_random(12, 11, 0.3));
+
+    matrix *C_m = BA_matrices_alloc(B_m, S_m);
+    mu_assert("kind", C_m->kind == MATRIX_PERMUTED_DENSE);
+    permuted_dense *C = (permuted_dense *) C_m;
+    mu_assert("m0", C->m0 == 7);
+    mu_assert("state bound", C->kernel_iwork != NULL && C->kernel_iwork[C->n0] > 0);
+
+    matrix *B_sparse = spd_to_sparse_matrix_copy(B_m);
+    matrix *C_ref = BA_matrices_alloc(B_sparse, S_m);
+
+    for (int round = 0; round < 2; round++)
+    {
+        if (round == 1)
+        {
+            for (int ii = 0; ii < S_m->nnz; ii++)
+            {
+                S_m->x[ii] = -2.0 * S_m->x[ii] + 1.0;
+            }
+            matrix_values_changed(S_m);
+        }
+        BA_matrices_fill_values(B_m, S_m, C_m);
+        BA_matrices_fill_values(B_sparse, S_m, C_ref);
+
+        CSR_matrix *csr_ours = C_m->to_csr(C_m);
+        CSR_matrix *csr_ref = C_ref->to_csr(C_ref);
+        mu_assert("m", csr_ours->m == csr_ref->m);
+        mu_assert("n", csr_ours->n == csr_ref->n);
+        mu_assert("nnz", csr_ours->nnz == csr_ref->nnz);
+        mu_assert("p", cmp_int_array(csr_ours->p, csr_ref->p, csr_ours->m + 1));
+        mu_assert("i", cmp_int_array(csr_ours->i, csr_ref->i, csr_ours->nnz));
+        mu_assert("x", cmp_double_array(csr_ours->x, csr_ref->x, csr_ours->nnz));
+    }
+
+    free_matrix(C_ref);
+    free_matrix(B_sparse);
+    free_matrix(C_m);
+    free_matrix(S_m);
+    free_matrix(B_m);
     return 0;
 }
 
@@ -770,7 +827,7 @@ const char *test_BA_pd_matrices_pd_pd_general_B(void)
 }
 
 /* BA_matrices with sparse A. Same B and same global A content as the
-   pd_pd_general_B test — the dispatcher routes through BA_pd_csc_*
+   pd_pd_general_B test — the dispatcher routes through BA_pd_csr_*
    and should yield byte-identical output. */
 const char *test_BA_pd_matrices_pd_csc(void)
 {
