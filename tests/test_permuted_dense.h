@@ -294,13 +294,9 @@ const char *test_permuted_dense_times_csr_no_active(void)
     return 0;
 }
 
-/* PD x sparse with m0 = 7 (not a multiple of 4, so a row-blocked fill has a
-   remainder) and n0 = 5 inside a 10x12 matrix, against a random 12x11 S.
-   Route 1 is the dispatcher's pd x sparse cell (BA_pd_csr_*). Oracle: B
-   flattened to sparse_matrix, sparse x sparse dispatch (csr_csc_matmul_*, no
-   code shared with the kernel). Compared via to_csr. The second round changes
-   S's values in place and refills both, so the fill must re-gather S->x
-   through the positions bound at alloc. */
+/* PD x sparse with m0 = 7 (not a multiple of 4) against a random S. Oracle:
+   B flattened to sparse_matrix, sparse x sparse dispatch. Round 2 mutates S's
+   values and refills. */
 const char *test_permuted_dense_times_csr_m0_remainder(void)
 {
     srand(20261015);

@@ -67,8 +67,7 @@ static matrix *dense_kron_alloc(const matrix *A_m, int p, matrix *J,
     {
         return BA_dense_kron_spd_alloc(A, p, (const stacked_pd *) J, layout);
     }
-    /* J is sparse: the per-block kernel binds the rows of J's CSR it needs
-       to each output block, so no CSC mirror is built for this path. */
+    /* J is sparse */
     return BA_dense_kron_csr_alloc(A, p, ((const sparse_matrix *) J)->csr, layout);
 }
 

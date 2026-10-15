@@ -121,8 +121,7 @@ static matrix *BA_pd_matrices_alloc(const permuted_dense *B, matrix *A)
         return BA_pd_spd_alloc(B, (const stacked_pd *) A);
     }
 
-    /* A is sparse: the kernel binds the rows of A's CSR it needs to C, so no
-       CSC mirror is built for this path. */
+    /* A is sparse */
     return BA_pd_csr_alloc(B, ((const sparse_matrix *) A)->csr);
 }
 

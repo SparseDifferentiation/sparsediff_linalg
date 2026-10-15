@@ -246,9 +246,7 @@ void BA_dense_kron_pd_fill_values(const permuted_dense *A, int p,
     kron_fill_blockwise(C, p, layout, kron_pd_fill_op, J);
 }
 
-/* csr: state is the (untransposed) scratch. BA_pd_csr_alloc reads the
-   scratch's col_perm for the block being allocated and binds the matching
-   rows of J to Ck, so the fill needs only the scratch's X (aliasing A->X). */
+/* csr: state is the (untransposed) scratch; BA_pd_csr_alloc reads col_perm. */
 static matrix *kron_csr_alloc_op(permuted_dense *state, const void *ctx)
 {
     return BA_pd_csr_alloc(state, (const CSR_matrix *) ctx);

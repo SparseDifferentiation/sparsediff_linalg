@@ -663,8 +663,7 @@ void BA_spd_csr_fill_values(const stacked_pd *B, const CSR_matrix *S, stacked_pd
 {
     for (int k = 0; k < C->n_blocks; k++)
     {
-        /* Bq is the block in B that contributes to Ck; Ck carries the compact
-           state BA_pd_csr_alloc bound for Bq's col_perm. */
+        /* Bq is the block in B that contributes to Ck */
         int q = C->src_block_idx[C->src_block_idx_p[k]];
         const permuted_dense *Bq = B->blocks[q];
         BA_pd_csr_fill_values(Bq->X, Bq->n0, S, C->blocks[k]);

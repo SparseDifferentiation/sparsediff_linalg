@@ -281,9 +281,8 @@ static inline double sparse_dot_dense(const double *vals, const int *idxs, int l
 
 matrix *BA_pd_csr_alloc(const permuted_dense *B, const CSR_matrix *S)
 {
-    /* Row r of B's block multiplies row B->col_perm[r] of S, so C's columns
-       are the union of those rows' patterns. mark[j] < 0 until column j of S
-       is seen, then its local column in C. */
+    /* C's columns are the union of the patterns of rows B->col_perm of S.
+       mark[j] is -1 until column j is seen, then its local column in C. */
     int n0_B = B->n0;
     int N = S->n;
     int *mark = (int *) sp_malloc(N * sizeof(int));
@@ -316,9 +315,8 @@ matrix *BA_pd_csr_alloc(const permuted_dense *B, const CSR_matrix *S)
         new_permuted_dense(B->base.m, N, B->m0, n0_C, B->row_perm, col_perm_C, NULL);
     sp_free(col_perm_C);
 
-    /* Bind the compact CSC of S[col_perm, :] to C: cp, then per entry its
-       local row r in B and its position in S->x. Entries of a compact column
-       are in ascending r, i.e. ascending global row. */
+    /* Compact CSC of S[col_perm, :]: cp, then per entry its local row r in B
+       and its position in S->x. */
     permuted_dense *C_pd = (permuted_dense *) C;
     C_pd->kernel_iwork_size = (size_t) n0_C + 1 + (size_t) 2 * nnz_K;
     C_pd->kernel_iwork = (int *) sp_malloc(C_pd->kernel_iwork_size * sizeof(int));
@@ -371,14 +369,12 @@ void BA_pd_csr_fill_values(const double *B, int n0_B, const CSR_matrix *S,
     const int *rows = cp + n0_C + 1;
     const int *pos = rows + nnz_K;
 
-    /* Gather S's current values into compact CSC order. */
     double *vals = C->kernel_dwork;
     for (int d = 0; d < nnz_K; d++)
     {
         vals[d] = S->x[pos[d]];
     }
 
-    /* C[i, c] = dot(row i of B, compact column c). */
     for (int i = 0; i < C->m0; i++)
     {
         const double *bi = B + (size_t) i * n0_B;
