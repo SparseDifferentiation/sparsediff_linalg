@@ -13,6 +13,7 @@
 #include "sparsediff_linalg/matmul_kron.h"
 
 #include "internal/csr_kernels.h"
+#include "internal/gustavson.h"
 #include "internal/permuted_dense.h"
 #include "internal/sparse_matrix.h"
 #include "internal/sparse_matrix_cache.h"
@@ -119,27 +120,14 @@ void BA_dense_kron_I_matrices_fill_values(const matrix *A, int m, const matrix *
     dense_kron_fill_values(A, m, J, C, KRON_A_I);
 }
 
-/* C = kron(I_p, A) @ J through the CSC kernel block_left_multiply_*. J is
-   converted (through its CSR view) into bound_csc, using csc_iwork (C->n = J->n
-   ints) as workspace. The kernel's CSC output is C's CSC mirror (csc_cache),
-   converted to C's CSR with the C->m-long bound_iwork. */
+/* C = kron(I_p, A) @ J through the Gustavson core: A's CSR rows against J's
+   CSR view, block by block. */
 matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J)
 {
     assert(A->kind == MATRIX_SPARSE && J->m == p * A->n);
-    int *csc_iwork = (int *) sp_malloc((size_t) J->n * sizeof(int));
-    CSC_matrix *J_csc = csr_to_csc_alloc(J->to_csr(J), csc_iwork);
-    CSC_matrix *C_csc = block_left_multiply_fill_sparsity(
-        ((const sparse_matrix *) A)->csr, J_csc, p);
-    int *csr_iwork = (int *) sp_malloc((size_t) C_csc->m * sizeof(int));
-    matrix *C = new_sparse_matrix(csc_to_csr_alloc(C_csc, csr_iwork));
-
-    sparse_matrix *sm = (sparse_matrix *) C;
-    sm->csc_cache = C_csc;
-    sm->csc_iwork = csc_iwork;
-    sm->csc_seen = C->values_version - 1;
-    sm->bound_iwork = csr_iwork;
-    sm->bound_csc = J_csc;
-    return C;
+    const CSR_matrix *a = ((const sparse_matrix *) A)->csr;
+    sparse_rows L = {a->p, a->i, a->x, a->m};
+    return new_sparse_matrix_dwork(gustavson_alloc(&L, p, J->to_csr(J)));
 }
 
 void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
@@ -147,16 +135,12 @@ void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
 {
     assert(A->kind == MATRIX_SPARSE && C->kind == MATRIX_SPARSE);
     assert(J->m == p * A->n);
-    (void) p;
+    const CSR_matrix *a = ((const sparse_matrix *) A)->csr;
+    sparse_rows L = {a->p, a->i, a->x, a->m};
     sparse_matrix *sm = (sparse_matrix *) C;
-    assert(sm->bound_csc != NULL && sm->bound_iwork != NULL);
-
-    csr_to_csc_fill_values(J->to_csr(J), sm->bound_csc, sm->csc_iwork);
-    block_left_multiply_fill_values(((const sparse_matrix *) A)->csr, sm->bound_csc,
-                                    sm->csc_cache);
-    csc_to_csr_fill_values(sm->csc_cache, sm->csr, sm->bound_iwork);
+    assert(sm->bound_dwork != NULL);
+    gustavson_fill_values(&L, p, NULL, J->to_csr(J), sm->bound_dwork, sm->csr);
     matrix_values_changed(C);
-    sm->csc_seen = C->values_version;
 }
 
 matrix *BA_kron_matrices_alloc(const matrix *A, int p, matrix *J)

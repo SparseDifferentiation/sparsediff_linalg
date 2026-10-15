@@ -18,21 +18,27 @@
 #ifndef INTERNAL_GUSTAVSON_H
 #define INTERNAL_GUSTAVSON_H
 
-/* Row-wise sparse x sparse core: C = L D A in CSR, with A in CSR and D
-   diagonal (NULL d: identity). The left operand L is given row by row as
-   sparse lists (lp, li, lx): row i has entries (li[ii], lx[ii]) for
-   lp[i] <= ii < lp[i + 1]. A CSC column (B^T A, A^T A) and a CSR row (B A)
-   both have this shape. */
-
 #include "sparsediff_linalg/CSR_matrix.h"
 
-/* Allocate C (m_out x A->n) with the exact sparsity of L A, rows sorted. */
-CSR_matrix *gustavson_alloc(const int *lp, const int *li, int m_out,
-                            const CSR_matrix *A);
+/* Rows of a compressed matrix (a CSR's rows or a CSC's columns), without a
+   copy: row i has entries (i[ii], x[ii]) for p[i] <= ii < p[i + 1]. */
+typedef struct sparse_rows
+{
+    const int *p;
+    const int *i;
+    const double *x;
+    int m;
+} sparse_rows;
+
+/* Row-wise sparse x sparse core: C = kron(I_blocks, L) D A in CSR, with A in
+   CSR and D diagonal (NULL d: identity). blocks == 1 is C = L D A; otherwise A
+   has blocks * n_L rows and block b of C is L D_b A_b. */
+
+/* Allocate C ((blocks * L->m) x A->n) with the exact sparsity, rows sorted. */
+CSR_matrix *gustavson_alloc(const sparse_rows *L, int blocks, const CSR_matrix *A);
 
 /* Fill C->x. acc is a workspace of length A->n. */
-void gustavson_fill_values(const int *lp, const int *li, const double *lx,
-                           const double *d, const CSR_matrix *A, double *acc,
-                           CSR_matrix *C);
+void gustavson_fill_values(const sparse_rows *L, int blocks, const double *d,
+                           const CSR_matrix *A, double *acc, CSR_matrix *C);
 
 #endif /* INTERNAL_GUSTAVSON_H */

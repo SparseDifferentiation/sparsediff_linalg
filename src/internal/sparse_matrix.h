@@ -24,10 +24,10 @@
 #include "sparsediff_linalg/matrix.h"
 
 /* Sparse matrix wrapping CSR_matrix. csc_cache is a lazily-built CSC_matrix mirror
-   used by the kernels that consume CSC (ATA / ATDA and the matmul dispatchers);
-   it's allocated on first need and refilled by the fills that read it, guarded by
-   csc_seen against base.values_version. csc_iwork is the workspace for
-   csr_to_csc. */
+   used by the kernels that read a sparse operand by column (the left operand of
+   B^T A, A in A^T A, a sparse operand under a dense-block kernel); it's allocated
+   on first need and refilled by the fills that read it, guarded by csc_seen
+   against base.values_version. csc_iwork is the workspace for csr_to_csc. */
 typedef struct sparse_matrix
 {
     matrix base;
@@ -39,21 +39,20 @@ typedef struct sparse_matrix
        matching fill: transpose_matrices_alloc stores csr->n scratch for
        transpose_matrices_fill_values; row_gather_alloc stores the base.m-long row
        map for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
-       position map for row_reduce_fill_values; BA_sparse_kron_matrices_alloc
-       stores the base.m-long csc_to_csr workspace. NULL otherwise; never
-       touched by any other kernel. */
+       position map for row_reduce_fill_values. NULL otherwise; never touched
+       by any other kernel. */
     int *bound_iwork;
     /* Version state bound by vstack_matrices_alloc and read and updated by
        vstack_matrices_fill_values; NULL otherwise. Layout, see
        matrix_vstack.c: [n | C_seen | seen_0 ... seen_{n-1}]. */
     uint64_t *bound_vwork;
-    /* CSC copy of J bound by BA_sparse_kron_matrices_alloc and refilled by
-       its fill; NULL otherwise. */
-    CSC_matrix *bound_csc;
-    /* Accumulator of length base.n bound by the sparse x sparse BTA / ATA
-       allocs for their fills; NULL otherwise. */
+    /* Accumulator of length base.n bound by the sparse x sparse allocs
+       (new_sparse_matrix_dwork) for their fills; NULL otherwise. */
     double *bound_dwork;
 } sparse_matrix;
+
+/* new_sparse_matrix plus the accumulator the sparse x sparse fills read. */
+matrix *new_sparse_matrix_dwork(CSR_matrix *A);
 
 /* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync
    the base's cached x pointer and nnz, since realloc may move the buffer. */

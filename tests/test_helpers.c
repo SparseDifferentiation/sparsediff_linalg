@@ -5,6 +5,7 @@
 
 #include "sparsediff_linalg/CSR_matrix.h"
 #include "sparsediff_linalg/matrix.h"
+#include "sparsediff_linalg/tracked_alloc.h"
 
 #define EPSILON 1e-7
 
@@ -155,4 +156,58 @@ CSR_matrix *new_csr_random(int m, int n, double density)
     free(tmp_i);
     free(tmp_x);
     return A;
+}
+
+CSR_matrix *new_csr_random_ex(int m, int n, double density, int dense_col,
+                              int skip_row, int skip_col)
+{
+    CSR_matrix *A = new_CSR_matrix(m, n, m * n);
+    int nnz = 0;
+    A->p[0] = 0;
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (i == skip_row || j == skip_col) continue;
+            if (j == dense_col || rand() < density * RAND_MAX)
+            {
+                A->i[nnz] = j;
+                A->x[nnz] = rand() / (double) RAND_MAX - 0.5;
+                nnz++;
+            }
+        }
+        A->p[i + 1] = nnz;
+    }
+    CSR_trim(A);
+    return A;
+}
+
+CSR_matrix *new_csr_of_csc(const CSC_matrix *A)
+{
+    int *iwork = (int *) sp_malloc((A->m > 0 ? A->m : 1) * sizeof(int));
+    CSR_matrix *R = csc_to_csr_alloc(A, iwork);
+    csc_to_csr_fill_values(A, R, iwork);
+    sp_free(iwork);
+    return R;
+}
+
+CSC_matrix *new_csc_of_csr(const CSR_matrix *A)
+{
+    int *iwork = (int *) sp_malloc((A->n > 0 ? A->n : 1) * sizeof(int));
+    CSC_matrix *C = csr_to_csc_alloc(A, iwork);
+    csr_to_csc_fill_values(A, C, iwork);
+    sp_free(iwork);
+    return C;
+}
+
+int csr_equal_tol(const CSR_matrix *A, const CSR_matrix *B, double tol)
+{
+    if (A->m != B->m || A->n != B->n || A->nnz != B->nnz) return 0;
+    if (!cmp_int_array(A->p, B->p, A->m + 1) || !cmp_int_array(A->i, B->i, A->nnz))
+        return 0;
+    for (int ii = 0; ii < A->nnz; ii++)
+    {
+        if (fabs(A->x[ii] - B->x[ii]) > tol) return 0;
+    }
+    return 1;
 }

@@ -281,6 +281,87 @@ const char *test_fill_refreshes_sparse_operand_kron(void)
     return 0;
 }
 
+/* C = B A with both sparse: B = (0.5 A)^T (4 x 6) and A (6 x 4), both scaled
+   between the fills. */
+const char *test_fill_refreshes_sparse_operands_BA_sparse(void)
+{
+    matrix *A = cc_make_A(CC_SPARSE);
+    matrix *A2 = cc_make_A(CC_SPARSE);
+    cc_scale(A2, 0.5);
+    matrix *B = transpose_matrices_alloc(A2);
+    transpose_matrices_fill_values(A2, B);
+    matrix *C = BA_matrices_alloc(B, A);
+    double Bd[24], Ad[24], Cd[16], Cref[16];
+    for (int pass = 0; pass < 2; pass++)
+    {
+        if (pass == 1)
+        {
+            cc_scale(A, 3.0);
+            cc_scale(B, -2.0);
+        }
+        BA_matrices_fill_values(B, A, C);
+        cc_to_dense(B, Bd);
+        cc_to_dense(A, Ad);
+        memset(Cref, 0, sizeof Cref);
+        for (int i = 0; i < 4; i++)
+            for (int k = 0; k < 6; k++)
+                for (int j = 0; j < 4; j++)
+                    Cref[i * 4 + j] += Bd[i * 6 + k] * Ad[k * 4 + j];
+        cc_to_dense(C, Cd);
+        mu_assert(pass == 0 ? "BA_sparse first fill"
+                            : "BA_sparse refill after mutation",
+                  cc_dense_eq(Cd, Cref, 16));
+    }
+    free_matrix(C);
+    free_matrix(B);
+    free_matrix(A2);
+    free_matrix(A);
+    return 0;
+}
+
+/* C = kron(I_2, A) J with A a dense-pattern sparse 2 x 3 and J sparse (6 x 4),
+   both scaled between the fills. */
+const char *test_fill_refreshes_sparse_operand_kron_sparse(void)
+{
+    double Xa[6] = {1, 2, 3, 4, 5, 6};
+    CSR_matrix *a = new_CSR_matrix(2, 3, 6);
+    int ap[3] = {0, 3, 6};
+    int ai[6] = {0, 1, 2, 0, 1, 2};
+    memcpy(a->p, ap, sizeof ap);
+    memcpy(a->i, ai, sizeof ai);
+    memcpy(a->x, Xa, sizeof Xa);
+    matrix *A = new_sparse_matrix(a);
+    matrix *J = cc_make_A(CC_SPARSE);
+    matrix *C = BA_sparse_kron_matrices_alloc(A, 2, J);
+    double Ad[6], Jd[24], Cd[16], Cref[16];
+    for (int pass = 0; pass < 2; pass++)
+    {
+        if (pass == 1)
+        {
+            cc_scale(J, -2.0);
+            cc_scale(A, 0.5);
+        }
+        BA_sparse_kron_matrices_fill_values(A, 2, J, C);
+        cc_to_dense(A, Ad);
+        cc_to_dense(J, Jd);
+        memset(Cref, 0, sizeof Cref);
+        for (int blk = 0; blk < 2; blk++)
+            for (int i = 0; i < 2; i++)
+                for (int k = 0; k < 3; k++)
+                    for (int j = 0; j < 4; j++)
+                        Cref[(blk * 2 + i) * 4 + j] +=
+                            Ad[i * 3 + k] * Jd[(blk * 3 + k) * 4 + j];
+        cc_to_dense(C, Cd);
+        mu_assert(pass == 0 ? "kron_sparse first fill"
+                            : "kron_sparse refill after mutation",
+                  cc_dense_eq(Cd, Cref, 16));
+    }
+    free_matrix(C);
+    free_matrix(J);
+    free_matrix(A);
+    return 0;
+}
+
 /* Sparse path: C = A^T diag(d) A reads A's CSC mirror. */
 const char *test_fill_refreshes_sparse_operand_ATDA(void)
 {
@@ -437,6 +518,29 @@ const char *test_public_fills_bump_output(void)
     mu_assert("BA_dense_kron_matrices_fill_values bumps", cc_bumped_once(C, v));
     free_matrix(C);
     free_matrix(Af);
+
+    matrix *At = transpose_matrices_alloc(A);
+    transpose_matrices_fill_values(A, At);
+    C = BA_matrices_alloc(At, A);
+    v = C->values_version;
+    BA_matrices_fill_values(At, A, C);
+    mu_assert("BA_sparse_matrices_fill_values bumps", cc_bumped_once(C, v));
+    free_matrix(C);
+    free_matrix(At);
+
+    CSR_matrix *ka = new_CSR_matrix(2, 3, 6);
+    int kap[3] = {0, 3, 6};
+    int kai[6] = {0, 1, 2, 0, 1, 2};
+    memcpy(ka->p, kap, sizeof kap);
+    memcpy(ka->i, kai, sizeof kai);
+    memcpy(ka->x, Xa, sizeof Xa);
+    matrix *As = new_sparse_matrix(ka);
+    C = BA_sparse_kron_matrices_alloc(As, 2, A);
+    v = C->values_version;
+    BA_sparse_kron_matrices_fill_values(As, 2, A, C);
+    mu_assert("BA_sparse_kron_matrices_fill_values bumps", cc_bumped_once(C, v));
+    free_matrix(C);
+    free_matrix(As);
 
     /* Sums (sparse outputs). */
     matrix *A2 = cc_make_A(CC_SPARSE);

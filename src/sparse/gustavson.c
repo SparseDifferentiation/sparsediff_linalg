@@ -22,11 +22,13 @@
 #include <assert.h>
 #include <stdlib.h>
 
-CSR_matrix *gustavson_alloc(const int *lp, const int *li, int m_out,
-                            const CSR_matrix *A)
+CSR_matrix *gustavson_alloc(const sparse_rows *L, int blocks, const CSR_matrix *A)
 {
     int n = A->n;
-    int i, j, k, ii, jj;
+    int m_out = L->m * blocks;
+    int n_L = A->m / blocks;
+    int i, j, k, r, b, ii, jj;
+    assert(blocks >= 1 && A->m == n_L * blocks);
 
     /* mark[j]: last row of C that saw column j. Pass 2 stamps m_out + i, so no
        reset is needed between the passes. */
@@ -39,25 +41,29 @@ CSR_matrix *gustavson_alloc(const int *lp, const int *li, int m_out,
 
     /* Pass 1: count the distinct columns of each row of C. */
     int nnz = 0;
-    for (i = 0; i < m_out; i++)
+    for (b = 0; b < blocks; b++)
     {
-        int count = 0;
-        for (ii = lp[i]; ii < lp[i + 1]; ii++)
+        for (r = 0; r < L->m; r++)
         {
-            k = li[ii];
-            assert(0 <= k && k < A->m);
-            for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
+            i = b * L->m + r;
+            int count = 0;
+            for (ii = L->p[r]; ii < L->p[r + 1]; ii++)
             {
-                j = A->i[jj];
-                if (mark[j] != i)
+                k = L->i[ii] + b * n_L;
+                assert(0 <= k && k < A->m);
+                for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
                 {
-                    mark[j] = i;
-                    count++;
+                    j = A->i[jj];
+                    if (mark[j] != i)
+                    {
+                        mark[j] = i;
+                        count++;
+                    }
                 }
             }
+            row_nnz[i] = count;
+            nnz += count;
         }
-        row_nnz[i] = count;
-        nnz += count;
     }
 
     CSR_matrix *C = new_CSR_matrix(m_out, n, nnz);
@@ -69,59 +75,68 @@ CSR_matrix *gustavson_alloc(const int *lp, const int *li, int m_out,
     sp_free(row_nnz);
 
     /* Pass 2: write each row's columns, then sort the row. */
-    for (i = 0; i < m_out; i++)
+    for (b = 0; b < blocks; b++)
     {
-        int pos = C->p[i];
-        for (ii = lp[i]; ii < lp[i + 1]; ii++)
+        for (r = 0; r < L->m; r++)
         {
-            k = li[ii];
-            for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
+            i = b * L->m + r;
+            int pos = C->p[i];
+            for (ii = L->p[r]; ii < L->p[r + 1]; ii++)
             {
-                j = A->i[jj];
-                if (mark[j] != m_out + i)
+                k = L->i[ii] + b * n_L;
+                for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
                 {
-                    mark[j] = m_out + i;
-                    C->i[pos++] = j;
+                    j = A->i[jj];
+                    if (mark[j] != m_out + i)
+                    {
+                        mark[j] = m_out + i;
+                        C->i[pos++] = j;
+                    }
                 }
             }
+            assert(pos == C->p[i + 1]);
+            sort_int_array(C->i + C->p[i], C->p[i + 1] - C->p[i]);
         }
-        assert(pos == C->p[i + 1]);
-        sort_int_array(C->i + C->p[i], C->p[i + 1] - C->p[i]);
     }
     sp_free(mark);
 
     return C;
 }
 
-void gustavson_fill_values(const int *lp, const int *li, const double *lx,
-                           const double *d, const CSR_matrix *A, double *acc,
-                           CSR_matrix *C)
+void gustavson_fill_values(const sparse_rows *L, int blocks, const double *d,
+                           const CSR_matrix *A, double *acc, CSR_matrix *C)
 {
-    int i, k, ii, jj;
-    assert(C->n == A->n);
+    int n_L = A->m / blocks;
+    int i, k, r, b, ii, jj;
+    assert(C->n == A->n && C->m == L->m * blocks && A->m == n_L * blocks);
 
-    for (i = 0; i < C->m; i++)
+    for (b = 0; b < blocks; b++)
     {
-        /* C's row is exactly the union scattered below, so this zeroes every
-           acc entry the scatter touches. */
-        for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
+        for (r = 0; r < L->m; r++)
         {
-            acc[C->i[jj]] = 0.0;
-        }
+            i = b * L->m + r;
 
-        for (ii = lp[i]; ii < lp[i + 1]; ii++)
-        {
-            k = li[ii];
-            double v = (d != NULL) ? lx[ii] * d[k] : lx[ii];
-            for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
+            /* C's row is exactly the union scattered below, so this zeroes
+               every acc entry the scatter touches. */
+            for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
             {
-                acc[A->i[jj]] += v * A->x[jj];
+                acc[C->i[jj]] = 0.0;
             }
-        }
 
-        for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
-        {
-            C->x[jj] = acc[C->i[jj]];
+            for (ii = L->p[r]; ii < L->p[r + 1]; ii++)
+            {
+                k = L->i[ii] + b * n_L;
+                double v = (d != NULL) ? L->x[ii] * d[k] : L->x[ii];
+                for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
+                {
+                    acc[A->i[jj]] += v * A->x[jj];
+                }
+            }
+
+            for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
+            {
+                C->x[jj] = acc[C->i[jj]];
+            }
         }
     }
 }

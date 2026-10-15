@@ -191,23 +191,27 @@ void csc_to_csr_fill_values(const CSC_matrix *A, CSR_matrix *C, int *iwork)
 CSR_matrix *BTA_alloc(const CSR_matrix *A, const CSC_matrix *B)
 {
     assert(A->m == B->m);
-    return gustavson_alloc(B->p, B->i, B->n, A);
+    sparse_rows L = {B->p, B->i, B->x, B->n};
+    return gustavson_alloc(&L, 1, A);
 }
 
 void BTDA_fill_values(const CSR_matrix *A, const CSC_matrix *B, const double *d,
                       double *acc, CSR_matrix *C)
 {
-    gustavson_fill_values(B->p, B->i, B->x, d, A, acc, C);
+    sparse_rows L = {B->p, B->i, B->x, B->n};
+    gustavson_fill_values(&L, 1, d, A, acc, C);
 }
 
 CSR_matrix *ATA_alloc(const CSC_matrix *A_csc, const CSR_matrix *A)
 {
     assert(A_csc->m == A->m && A_csc->n == A->n);
-    return gustavson_alloc(A_csc->p, A_csc->i, A_csc->n, A);
+    sparse_rows L = {A_csc->p, A_csc->i, A_csc->x, A_csc->n};
+    return gustavson_alloc(&L, 1, A);
 }
 
 void ATDA_fill_values(const CSC_matrix *A_csc, const double *d, const CSR_matrix *A,
                       double *acc, CSR_matrix *C)
 {
-    gustavson_fill_values(A_csc->p, A_csc->i, A_csc->x, d, A, acc, C);
+    sparse_rows L = {A_csc->p, A_csc->i, A_csc->x, A_csc->n};
+    gustavson_fill_values(&L, 1, d, A, acc, C);
 }
