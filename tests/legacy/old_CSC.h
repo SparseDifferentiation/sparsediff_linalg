@@ -20,8 +20,10 @@
 
 /* LEGACY: kept only as a test oracle for the library's own kernels. Compiled
    into sparsediff_linalg_tests, never into the library. Not part of the API.
-   These three were the engine's quad_form / quad_over_lin helpers, retired by
-   the matrix dispatchers (Q J_f as B^T A with Q the transposed operand). */
+   symBA_alloc, BA_fill_values and yTA_fill_values were the engine's quad_form /
+   quad_over_lin helpers, retired by the matrix dispatchers (Q J_f as B^T A with
+   Q the transposed operand). The old_* kernels are the dot-product sparse x
+   sparse kernels retired by the Gustavson core (src/sparse/gustavson.c). */
 
 #include "sparsediff_linalg/CSC_matrix.h"
 #include "sparsediff_linalg/CSR_matrix.h"
@@ -37,5 +39,18 @@ int count_nonzero_cols_csc(const CSC_matrix *A);
 
 /* Fill values of C = x^T A. The matrix C must have filled sparsity. */
 void yTA_fill_values(const CSC_matrix *A, const double *x, CSR_matrix *C);
+
+/* Fill sparsity of C = A^T D A for diagonal D. */
+CSR_matrix *old_ATA_alloc(const CSC_matrix *A);
+
+/* Compute values for C = A^T D A (NULL d corresponds to D as identity). */
+void old_ATDA_fill_values(const CSC_matrix *A, const double *d, CSR_matrix *C);
+
+/* Fill sparsity of C = B^T D A for diagonal D. */
+CSR_matrix *old_BTA_alloc(const CSC_matrix *A, const CSC_matrix *B);
+
+/* Compute values for C = B^T D A (NULL d corresponds to D as identity). */
+void old_BTDA_fill_values(const CSC_matrix *A, const CSC_matrix *B, const double *d,
+                          CSR_matrix *C);
 
 #endif /* OLD_CSC_H */

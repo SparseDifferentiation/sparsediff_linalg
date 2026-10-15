@@ -50,6 +50,9 @@ typedef struct sparse_matrix
     /* CSC copy of J bound by BA_sparse_kron_matrices_alloc and refilled by
        its fill; NULL otherwise. */
     CSC_matrix *bound_csc;
+    /* Accumulator of length base.n bound by the sparse x sparse BTA / ATA
+       allocs for their fills; NULL otherwise. */
+    double *bound_dwork;
 } sparse_matrix;
 
 /* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync

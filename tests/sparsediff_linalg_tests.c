@@ -61,6 +61,14 @@ int main(void)
     mu_run_test(test_ATA_alloc_random, tests_run);
     mu_run_test(test_ATA_alloc_random2, tests_run);
     mu_run_test(test_BTA_alloc_and_BTDA_fill, tests_run);
+    mu_run_test(test_gustavson_BTA_matches_legacy, tests_run);
+    mu_run_test(test_gustavson_ATA_matches_legacy, tests_run);
+    mu_run_test(test_gustavson_dense_column, tests_run);
+    mu_run_test(test_gustavson_empty_rows_and_cols, tests_run);
+    mu_run_test(test_sparse_BTA_ATA_bind_accumulator, tests_run);
+#ifdef SP_TRACK_MEMORY
+    mu_run_test(test_sparse_BTDA_ATDA_fill_no_transient_alloc, tests_run);
+#endif
     mu_run_test(test_csr_to_coo, tests_run);
     mu_run_test(test_csr_to_coo_lower_triangular, tests_run);
     mu_run_test(test_refresh_lower_triangular_coo, tests_run);
