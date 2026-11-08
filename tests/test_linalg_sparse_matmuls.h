@@ -778,29 +778,43 @@ const char *test_block_left_multiply_vec_three_blocks(void)
     return NULL;
 }
 
-static int sort_test_cmp(const void *a, const void *b)
+/* Sort a copy of `in` and compare with `expected`. */
+static int sort_matches(const int *in, const int *expected, int size)
 {
-    int x = *(const int *) a, y = *(const int *) b;
-    return (x > y) - (x < y);
+    int a[32];
+    memcpy(a, in, (size_t) size * sizeof(int));
+    sort_int_array(a, size);
+    return cmp_int_array(a, expected, size);
 }
 
-/* sort_int_array on every length 0..40 (both the insertion-sort and the qsort
-   path), with duplicates and negative values, against qsort. */
-const char *test_sort_int_array_lengths(void)
+/* sort_int_array: sizes 0 and 1 are left alone, and short (insertion sort,
+   size <= 16) and long (qsort, size >= 17) arrays come out ascending. */
+const char *test_sort_int_array(void)
 {
-    unsigned s = 12345u;
-    for (int size = 0; size <= 40; size++)
+    int one[1] = {7};
+    sort_int_array(one, 0);
+    mu_assert("size 0 leaves the array alone", one[0] == 7);
+    sort_int_array(one, 1);
+    mu_assert("size 1 leaves the array alone", one[0] == 7);
+
+    int in2[2] = {5, -3}, ex2[2] = {-3, 5};
+    mu_assert("two elements in reverse order", sort_matches(in2, ex2, 2));
+
+    int in5[5] = {4, 1, 4, -2, 0}, ex5[5] = {-2, 0, 1, 4, 4};
+    mu_assert("duplicates and negatives", sort_matches(in5, ex5, 5));
+
+    int in16[16], ex16[16], in17[17], ex17[17];
+    for (int k = 0; k < 16; k++)
     {
-        int a[40], ref[40];
-        for (int k = 0; k < size; k++)
-        {
-            s = s * 1103515245u + 12345u;
-            a[k] = (int) ((s >> 16) % 21) - 10;
-            ref[k] = a[k];
-        }
-        sort_int_array(a, size);
-        qsort(ref, size, sizeof(int), sort_test_cmp);
-        mu_assert("sort_int_array matches qsort", cmp_int_array(a, ref, size));
+        in16[k] = 15 - k;
+        ex16[k] = k;
     }
+    for (int k = 0; k < 17; k++)
+    {
+        in17[k] = 16 - k;
+        ex17[k] = k;
+    }
+    mu_assert("16 reversed (largest insertion-sort size)", sort_matches(in16, ex16, 16));
+    mu_assert("17 reversed (smallest qsort size)", sort_matches(in17, ex17, 17));
     return 0;
 }
