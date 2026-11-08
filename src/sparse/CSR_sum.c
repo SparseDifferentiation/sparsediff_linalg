@@ -270,6 +270,7 @@ CSR_matrix *sum_n_csr_alloc(const CSR_matrix *const *ops, int n, int *idx_map)
                 }
             }
         }
+        if (nnz == start) continue; /* row empty in every operand */
         sort_int_array(out->i + start, nnz - start);
 
         /* record positions and fill the index maps */
