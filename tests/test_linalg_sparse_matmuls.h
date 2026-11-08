@@ -777,3 +777,30 @@ const char *test_block_left_multiply_vec_three_blocks(void)
     free_CSR_matrix(A);
     return NULL;
 }
+
+static int sort_test_cmp(const void *a, const void *b)
+{
+    int x = *(const int *) a, y = *(const int *) b;
+    return (x > y) - (x < y);
+}
+
+/* sort_int_array on every length 0..40 (both the insertion-sort and the qsort
+   path), with duplicates and negative values, against qsort. */
+const char *test_sort_int_array_lengths(void)
+{
+    unsigned s = 12345u;
+    for (int size = 0; size <= 40; size++)
+    {
+        int a[40], ref[40];
+        for (int k = 0; k < size; k++)
+        {
+            s = s * 1103515245u + 12345u;
+            a[k] = (int) ((s >> 16) % 21) - 10;
+            ref[k] = a[k];
+        }
+        sort_int_array(a, size);
+        qsort(ref, size, sizeof(int), sort_test_cmp);
+        mu_assert("sort_int_array matches qsort", cmp_int_array(a, ref, size));
+    }
+    return 0;
+}

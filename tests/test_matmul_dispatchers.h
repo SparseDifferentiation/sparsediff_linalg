@@ -2973,6 +2973,52 @@ const char *test_sum_n_matrices_n1_n5(void)
     return 0;
 }
 
+/* sum_n_matrices whose merged row has more than 16 columns (the qsort path of
+   sort_int_array), spread over three operands with overlaps, next to a row
+   that is empty in every operand, against a dense reference. */
+const char *test_sum_n_matrices_long_row(void)
+{
+    /* row 0: A has columns 0,3,...,21, B has 1,4,...,22, D has 0,1,2,5,...,23;
+       row 1 is empty everywhere. 24 distinct columns in the merged row. */
+    int pa[3] = {0, 8, 8}, pb[3] = {0, 8, 8}, pd[3] = {0, 10, 10};
+    int ia[8], ib[8], id[10];
+    double xa[8], xb[8], xd[10];
+    for (int k = 0; k < 8; k++)
+    {
+        ia[k] = 3 * k; xa[k] = 1.0 + k;
+        ib[k] = 3 * k + 1; xb[k] = 10.0 + k;
+    }
+    id[0] = 0; id[1] = 1;
+    for (int k = 2; k < 10; k++) id[k] = 3 * (k - 2) + 2;
+    for (int k = 0; k < 10; k++) xd[k] = 100.0 + k;
+    matrix *A = sn_sparse(2, 40, 8, pa, ia, xa);
+    matrix *B = sn_sparse(2, 40, 8, pb, ib, xb);
+    matrix *D = sn_sparse(2, 40, 10, pd, id, xd);
+
+    matrix *ops[3] = {A, B, D};
+    matrix *C = sum_n_matrices_alloc(ops, 3);
+    sum_n_matrices_fill_values(ops, 3, C);
+    mu_assert("long row: pattern valid", csr_is_valid(C->to_csr(C)));
+    mu_assert("long row: 24 entries", C->nnz == 24);
+    double *ref = (double *) sp_calloc(80, sizeof(double));
+    for (int k = 0; k < 3; k++)
+    {
+        double *d = dense_of(ops[k]);
+        for (int c = 0; c < 80; c++) ref[c] += d[c];
+        sp_free(d);
+    }
+    double *got = dense_of(C);
+    mu_assert("long row: matches dense reference", cmp_double_array(got, ref, 80));
+    sp_free(got);
+    sp_free(ref);
+
+    free_matrix(C);
+    free_matrix(D);
+    free_matrix(B);
+    free_matrix(A);
+    return 0;
+}
+
 /* sum_n_matrices_fill_zero + fill_add on the sum_4 fixture: adding the operands
    one by one matches fill_values, and an operand overwritten after it was added
    (as a shared subexpression's later evaluation would) does not leak in. */
