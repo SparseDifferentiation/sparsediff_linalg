@@ -29,29 +29,10 @@ static int compare_int_asc(const void *a, const void *b)
     return (ia > ib) - (ia < ib);
 }
 
-/* Sparse rows are usually short (often 0 or 1 entries), and there qsort's
-   call and comparator overhead dominates: sort short arrays by insertion. */
-#define SORT_INT_INSERTION_MAX 16
-
 void sort_int_array(int *array, int size)
 {
     if (size < 2) return;
-    if (size > SORT_INT_INSERTION_MAX)
-    {
-        qsort(array, size, sizeof(int), compare_int_asc);
-        return;
-    }
-    for (int i = 1; i < size; i++)
-    {
-        int v = array[i];
-        int j = i - 1;
-        while (j >= 0 && array[j] > v)
-        {
-            array[j + 1] = array[j];
-            j--;
-        }
-        array[j + 1] = v;
-    }
+    qsort(array, size, sizeof(int), compare_int_asc);
 }
 
 bool has_overlap(const int *a_idx, int a_len, const int *b_idx, int b_len,

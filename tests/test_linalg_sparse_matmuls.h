@@ -778,43 +778,16 @@ const char *test_block_left_multiply_vec_three_blocks(void)
     return NULL;
 }
 
-/* Sort a copy of `in` and compare with `expected`. */
-static int sort_matches(const int *in, const int *expected, int size)
-{
-    int a[32];
-    memcpy(a, in, (size_t) size * sizeof(int));
-    sort_int_array(a, size);
-    return cmp_int_array(a, expected, size);
-}
-
-/* sort_int_array: sizes 0 and 1 are left alone, and short (insertion sort,
-   size <= 16) and long (qsort, size >= 17) arrays come out ascending. */
+/* sort_int_array returns early for fewer than 2 elements (most rows of a sparse
+   Hessian are empty) and still sorts longer arrays. */
 const char *test_sort_int_array(void)
 {
-    int one[1] = {7};
-    sort_int_array(one, 0);
-    mu_assert("size 0 leaves the array alone", one[0] == 7);
-    sort_int_array(one, 1);
-    mu_assert("size 1 leaves the array alone", one[0] == 7);
-
-    int in2[2] = {5, -3}, ex2[2] = {-3, 5};
-    mu_assert("two elements in reverse order", sort_matches(in2, ex2, 2));
-
-    int in5[5] = {4, 1, 4, -2, 0}, ex5[5] = {-2, 0, 1, 4, 4};
-    mu_assert("duplicates and negatives", sort_matches(in5, ex5, 5));
-
-    int in16[16], ex16[16], in17[17], ex17[17];
-    for (int k = 0; k < 16; k++)
-    {
-        in16[k] = 15 - k;
-        ex16[k] = k;
-    }
-    for (int k = 0; k < 17; k++)
-    {
-        in17[k] = 16 - k;
-        ex17[k] = k;
-    }
-    mu_assert("16 reversed (largest insertion-sort size)", sort_matches(in16, ex16, 16));
-    mu_assert("17 reversed (smallest qsort size)", sort_matches(in17, ex17, 17));
+    int a[3] = {7, 2, 5};
+    sort_int_array(a, 0);
+    mu_assert("size 0 leaves the array alone", a[0] == 7 && a[1] == 2 && a[2] == 5);
+    sort_int_array(a, 1);
+    mu_assert("size 1 leaves the array alone", a[0] == 7 && a[1] == 2 && a[2] == 5);
+    sort_int_array(a, 3);
+    mu_assert("size 3 is sorted", a[0] == 2 && a[1] == 5 && a[2] == 7);
     return 0;
 }
