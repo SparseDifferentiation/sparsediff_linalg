@@ -777,3 +777,17 @@ const char *test_block_left_multiply_vec_three_blocks(void)
     free_CSR_matrix(A);
     return NULL;
 }
+
+/* sort_int_array returns early for fewer than 2 elements (most rows of a sparse
+   Hessian are empty) and still sorts longer arrays. */
+const char *test_sort_int_array(void)
+{
+    int a[3] = {7, 2, 5};
+    sort_int_array(a, 0);
+    mu_assert("size 0 leaves the array alone", a[0] == 7 && a[1] == 2 && a[2] == 5);
+    sort_int_array(a, 1);
+    mu_assert("size 1 leaves the array alone", a[0] == 7 && a[1] == 2 && a[2] == 5);
+    sort_int_array(a, 3);
+    mu_assert("size 3 is sorted", a[0] == 2 && a[1] == 5 && a[2] == 7);
+    return 0;
+}

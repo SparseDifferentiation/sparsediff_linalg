@@ -31,6 +31,7 @@ static int compare_int_asc(const void *a, const void *b)
 
 void sort_int_array(int *array, int size)
 {
+    if (size < 2) return;
     qsort(array, size, sizeof(int), compare_int_asc);
 }
 
