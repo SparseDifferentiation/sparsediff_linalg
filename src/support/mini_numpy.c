@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "internal/utils.h"
 #include "sparsediff_linalg/dense.h"
 #include <string.h>
 
@@ -46,13 +47,27 @@ void scaled_ones(double *result, int size, double value)
     }
 }
 
+/* A_transpose works on tiles of TRANSPOSE_TILE x TRANSPOSE_TILE entries */
+#define TRANSPOSE_TILE 32
+
 void A_transpose(double *AT, const double *A, int m, int n)
 {
-    for (int i = 0; i < m; i++)
+    /* The writes to AT are m doubles apart, so for a large A a plain double loop
+       misses the cache on every write. We go through A in tiles instead, so the
+       part of AT that a tile writes to stays in cache. */
+    for (int i0 = 0; i0 < m; i0 += TRANSPOSE_TILE)
     {
-        for (int j = 0; j < n; j++)
+        int i1 = MIN(i0 + TRANSPOSE_TILE, m);
+        for (int j0 = 0; j0 < n; j0 += TRANSPOSE_TILE)
         {
-            AT[j * m + i] = A[i * n + j];
+            int j1 = MIN(j0 + TRANSPOSE_TILE, n);
+            for (int i = i0; i < i1; i++)
+            {
+                for (int j = j0; j < j1; j++)
+                {
+                    AT[j * m + i] = A[i * n + j];
+                }
+            }
         }
     }
 }
