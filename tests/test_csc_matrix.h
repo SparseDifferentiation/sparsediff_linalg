@@ -378,23 +378,110 @@ const char *test_gustavson_empty_rows_and_cols(void)
     return 0;
 }
 
-/* The sparse x sparse dispatchers bind the accumulator to C at alloc. */
+/* The sparse x sparse dispatchers bind a plan or the accumulator to C at
+   alloc, never both. */
 const char *test_sparse_BTA_ATA_bind_accumulator(void)
 {
     matrix *A = new_sparse_matrix(new_csr_random_ex(30, 20, 0.1, -1, -1, -1));
     matrix *B = new_sparse_matrix(new_csr_random_ex(30, 12, 0.1, -1, -1, -1));
     matrix *C = BTA_matrices_alloc(A, B);
     matrix *G = ATA_matrices_alloc(A);
-    mu_assert("BTA: no accumulator bound",
-              ((sparse_matrix *) C)->bound_dwork != NULL);
-    mu_assert("ATA: no accumulator bound",
-              ((sparse_matrix *) G)->bound_dwork != NULL);
+    mu_assert("BTA: plan or accumulator bound",
+              (((sparse_matrix *) C)->bound_iwork != NULL) !=
+                  (((sparse_matrix *) C)->bound_dwork != NULL));
+    mu_assert("ATA: plan or accumulator bound",
+              (((sparse_matrix *) G)->bound_iwork != NULL) !=
+                  (((sparse_matrix *) G)->bound_dwork != NULL));
     BTA_matrices_fill_values(A, B, C);
     ATDA_matrices_fill_values(A, NULL, G);
     free_matrix(C);
     free_matrix(G);
     free_matrix(A);
     free_matrix(B);
+    return 0;
+}
+
+/* A^T D A through the dispatcher against a dense reference */
+static int csc_test_ata_matches_dense(const CSR_matrix *A, const double *d,
+                                      matrix *G)
+{
+    int n = A->n;
+    double *ref = (double *) sp_calloc((size_t) n * n, sizeof(double));
+    for (int k = 0; k < A->m; k++)
+    {
+        for (int ii = A->p[k]; ii < A->p[k + 1]; ii++)
+        {
+            for (int jj = A->p[k]; jj < A->p[k + 1]; jj++)
+            {
+                ref[A->i[ii] * n + A->i[jj]] += A->x[ii] * d[k] * A->x[jj];
+            }
+        }
+    }
+    const CSR_matrix *g = G->to_csr(G);
+    int ok = 1;
+    for (int i = 0; i < n; i++)
+    {
+        for (int jj = g->p[i]; jj < g->p[i + 1]; jj++)
+        {
+            double diff = g->x[jj] - ref[i * n + g->i[jj]];
+            ok = ok && fabs(diff) < 1e-12;
+            ref[i * n + g->i[jj]] = 0.0;
+        }
+    }
+    /* nothing outside the pattern */
+    for (int c = 0; c < n * n; c++) ok = ok && ref[c] == 0.0;
+    sp_free(ref);
+    return ok;
+}
+
+/* The dispatcher gives a product a plan exactly when it has at most
+   GUSTAVSON_PLAN_MAX_RATIO terms per entry of the result, and the accumulator
+   otherwise. Both give the right values, also after the values change. */
+const char *test_sparse_product_plan_cap(void)
+{
+    srand(21);
+    int n_planned = 0;
+    int n_capped = 0;
+    double dens[6] = {0.01, 0.03, 0.08, 0.2, 0.5, 1.0};
+
+    for (int q = 0; q < 6; q++)
+    {
+        /* q = 5: fully dense, 40 terms per entry */
+        CSR_matrix *A_csr = new_csr_random(40, 30, dens[q]);
+        matrix *A = new_sparse_matrix(A_csr);
+        double *d = csc_test_random_vec(40);
+        matrix *G = ATA_matrices_alloc(A);
+        sparse_matrix *sm_G = (sparse_matrix *) G;
+
+        size_t terms = 0;
+        for (int k = 0; k < A_csr->m; k++)
+        {
+            size_t len = (size_t) (A_csr->p[k + 1] - A_csr->p[k]);
+            terms += len * len;
+        }
+        int want_plan = terms > 0 &&
+                        terms <= (size_t) GUSTAVSON_PLAN_MAX_RATIO * (size_t) G->nnz;
+        mu_assert("plan cap: plan bound against the cap",
+                  (sm_G->bound_iwork != NULL) == want_plan);
+        mu_assert("plan cap: accumulator bound together with a plan",
+                  (sm_G->bound_dwork != NULL) == !want_plan);
+        n_planned += want_plan;
+        n_capped += terms > 0 && !want_plan;
+
+        ATDA_matrices_fill_values(A, d, G);
+        mu_assert("plan cap: wrong values", csc_test_ata_matches_dense(A_csr, d, G));
+        for (int ii = 0; ii < A_csr->nnz; ii++) A_csr->x[ii] = 0.5 - A_csr->x[ii];
+        matrix_values_changed(A);
+        ATDA_matrices_fill_values(A, d, G);
+        mu_assert("plan cap: wrong values after refill",
+                  csc_test_ata_matches_dense(A_csr, d, G));
+
+        free_matrix(G);
+        free_matrix(A);
+        sp_free(d);
+    }
+    mu_assert("plan cap: no product was planned", n_planned >= 2);
+    mu_assert("plan cap: no product was capped", n_capped >= 2);
     return 0;
 }
 
@@ -437,6 +524,19 @@ const char *test_sparse_BTDA_ATDA_fill_no_transient_alloc(void)
     ATDA_matrices_fill_values(A, d, G);
     mu_assert("sparse ATDA fill allocated",
               fill_is_alloc_free(csc_test_run_ATDA, &args_ata));
+
+    /* one of the two has a plan and the fills above covered it; a dense A is
+       over the cap and takes the accumulator path */
+    matrix *A2 = new_sparse_matrix(new_csr_random_ex(40, 30, 1.0, -1, -1, -1));
+    matrix *G2 = ATA_matrices_alloc(A2);
+    mu_assert("dense ATA got a plan", ((sparse_matrix *) G2)->bound_iwork == NULL);
+    mu_assert("sparse ATA got no plan", ((sparse_matrix *) G)->bound_iwork != NULL);
+    csc_test_fill_args args_ata2 = {A2, NULL, d, G2};
+    ATDA_matrices_fill_values(A2, d, G2);
+    mu_assert("capped ATDA fill allocated",
+              fill_is_alloc_free(csc_test_run_ATDA, &args_ata2));
+    free_matrix(G2);
+    free_matrix(A2);
 
     free_matrix(C);
     free_matrix(G);

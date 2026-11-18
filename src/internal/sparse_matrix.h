@@ -21,6 +21,7 @@
 /* Private: the sparse kind's layout. Consumers see only matrix.h and the
    constructors, both in matrix.h. */
 
+#include "internal/gustavson.h"
 #include "sparsediff_linalg/matrix.h"
 
 /* Sparse matrix wrapping CSR_matrix. csc_cache is a lazily-built CSC_matrix mirror
@@ -39,20 +40,27 @@ typedef struct sparse_matrix
        matching fill: transpose_matrices_alloc stores csr->n scratch for
        transpose_matrices_fill_values; row_gather_alloc stores the base.m-long row
        map for row_gather_fill_values; row_reduce_alloc stores the source-nnz-long
-       position map for row_reduce_fill_values. NULL otherwise; never touched
-       by any other kernel. */
+       position map for row_reduce_fill_values; sparse_product_alloc stores the
+       plan for sparse_product_fill_values (or NULL, see below). NULL otherwise;
+       never touched by any other kernel. */
     int *bound_iwork;
     /* Version state bound by vstack_matrices_alloc and read and updated by
        vstack_matrices_fill_values; NULL otherwise. Layout, see
        matrix_vstack.c: [n | C_seen | seen_0 ... seen_{n-1}]. */
     uint64_t *bound_vwork;
-    /* Accumulator of length base.n bound by the sparse x sparse allocs
-       (new_sparse_matrix_dwork) for their fills; NULL otherwise. */
+    /* Accumulator of length base.n bound by sparse_product_alloc for a product
+       without a plan; NULL otherwise. */
     double *bound_dwork;
 } sparse_matrix;
 
-/* new_sparse_matrix plus the accumulator the sparse x sparse fills read. */
-matrix *new_sparse_matrix_dwork(CSR_matrix *A);
+/* Sparse x sparse product C = kron(I_blocks, L) D A (see gustavson.h) as a
+   sparse_matrix. The alloc binds to C what the fill needs: a plan in
+   bound_iwork if the product is within GUSTAVSON_PLAN_MAX_RATIO, otherwise the
+   accumulator in bound_dwork. The fill must get the same L, blocks and A
+   structure as the alloc; d is the diagonal (NULL: identity). */
+matrix *sparse_product_alloc(const sparse_rows *L, int blocks, const CSR_matrix *A);
+void sparse_product_fill_values(const sparse_rows *L, int blocks, const double *d,
+                                const CSR_matrix *A, matrix *C);
 
 /* Trim a wrapped capacity-built CSR to its true size (CSR_trim) and re-sync
    the base's cached x pointer and nnz, since realloc may move the buffer. */

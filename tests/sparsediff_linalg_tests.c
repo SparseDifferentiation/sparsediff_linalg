@@ -54,6 +54,8 @@ int main(void)
     mu_run_test(test_gustavson_ba_matches_reference_random, tests_run);
     mu_run_test(test_gustavson_ba_matches_legacy, tests_run);
     mu_run_test(test_gustavson_kron_matches_legacy, tests_run);
+    mu_run_test(test_gustavson_plan_matches_accumulator, tests_run);
+    mu_run_test(test_gustavson_plan_cap, tests_run);
     mu_run_test(test_block_left_multiply_vec_single_block, tests_run);
     mu_run_test(test_block_left_multiply_vec_two_blocks, tests_run);
     mu_run_test(test_block_left_multiply_vec_sparse, tests_run);
@@ -68,6 +70,7 @@ int main(void)
     mu_run_test(test_gustavson_dense_column, tests_run);
     mu_run_test(test_gustavson_empty_rows_and_cols, tests_run);
     mu_run_test(test_sparse_BTA_ATA_bind_accumulator, tests_run);
+    mu_run_test(test_sparse_product_plan_cap, tests_run);
 #ifdef SP_TRACK_MEMORY
     mu_run_test(test_sparse_BTDA_ATDA_fill_no_transient_alloc, tests_run);
 #endif
