@@ -14,6 +14,7 @@
 #include "test_csc_matrix.h"
 #include "test_csr_csc_conversion.h"
 #include "test_csr_matrix.h"
+#include "test_dense.h"
 #include "test_linalg_sparse_matmuls.h"
 #include "test_linalg_utils_matmul_chain_rule.h"
 #include "test_matmul_dispatchers.h"
@@ -37,6 +38,7 @@ int main(void)
     mu_run_test(test_sat_mul_int_clamps_on_overflow, tests_run);
     mu_run_test(test_row_gather_alloc_no_int_overflow, tests_run);
     mu_run_test(test_cblas_ddot, tests_run);
+    mu_run_test(test_A_transpose, tests_run);
     mu_run_test(test_transpose, tests_run);
     mu_run_test(test_AT_alloc_and_fill, tests_run);
     mu_run_test(test_csr_to_csc_split, tests_run);
