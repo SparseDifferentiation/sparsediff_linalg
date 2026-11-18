@@ -560,7 +560,8 @@ matrix *BTA_pd_csc_alloc(const permuted_dense *B, const CSC_matrix *A)
                                    B->col_perm, col_active->data, NULL);
     iVec_free(col_active);
 
-    /* Pre-size B's dwork for the BTDA fill (holds (diag(d) B)^T). */
+    /* Pre-size B's dwork for the fills (B^T in BTA, a tile of columns of C in
+       BTDA). */
     permuted_dense_ensure_kernel_dwork(B, (size_t) B->m0 * B->n0);
 
     return C;
@@ -581,7 +582,10 @@ void BTA_pd_csc_fill_values(const permuted_dense *B, const CSC_matrix *A,
     BTA_denseT_csc_fill_values(B->kernel_dwork, B->m0, B->row_inv, A, C);
 }
 
-/* C = B^T diag(d) A = (diag (d) B)^T A */
+/* number of columns of C that BTDA_pd_csc_fill_values builds at a time */
+#define BTDA_TILE 16
+
+/* C = B^T diag(d) A */
 void BTDA_pd_csc_fill_values(const permuted_dense *B, const double *d,
                              const CSC_matrix *A, permuted_dense *C)
 {
@@ -591,20 +595,52 @@ void BTDA_pd_csc_fill_values(const permuted_dense *B, const double *d,
         return;
     }
 
-    int m0 = B->m0;
+    /* Column j of C is sum_k d[k] * A[k, j] * (row k of B)^T, a combination of
+       contiguous rows of B. We build BTDA_TILE columns of C at a time as the
+       rows of T, and then copy T^T into C. */
     int n0 = B->n0;
+    int tile = MIN(B->m0, BTDA_TILE);
+    double *T = B->kernel_dwork;
 
-    /* conpute B->kernel_dwork = (diag(d) B)^T */
-    for (int kk = 0; kk < m0; kk++)
+    for (int j0 = 0; j0 < C->n0; j0 += tile)
     {
-        double dk = d[B->row_perm[kk]];
-        for (int ii = 0; ii < n0; ii++)
+        int nb = MIN(tile, C->n0 - j0);
+        memset(T, 0, (size_t) nb * n0 * sizeof(double));
+
+        /* row b of T = column j0 + b of C */
+        for (int b = 0; b < nb; b++)
         {
-            B->kernel_dwork[ii * m0 + kk] = dk * B->X[kk * n0 + ii];
+            double *t = T + b * n0;
+            int j = C->col_perm[j0 + b];
+
+            for (int jj = A->p[j]; jj < A->p[j + 1]; jj++)
+            {
+                int k = A->i[jj];
+                int kk = B->row_inv[k];
+                if (kk < 0)
+                {
+                    continue;
+                }
+
+                double s = d[k] * A->x[jj];
+                const double *bk = B->X + kk * n0;
+                for (int i = 0; i < n0; i++)
+                {
+                    t[i] += s * bk[i];
+                }
+            }
+        }
+
+        /* C[:, j0:j0 + nb] = T^T */
+        for (int i = 0; i < n0; i++)
+        {
+            double *ci = C->X + i * C->n0 + j0;
+            for (int b = 0; b < nb; b++)
+            {
+                ci[b] = T[b * n0 + i];
+            }
         }
     }
-
-    BTA_denseT_csc_fill_values(B->kernel_dwork, m0, B->row_inv, A, C);
 }
 
 matrix *BTA_csc_pd_alloc(const CSC_matrix *B, const permuted_dense *A)
