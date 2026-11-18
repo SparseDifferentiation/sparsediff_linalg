@@ -140,6 +140,7 @@ int main(void)
     mu_run_test(test_BTA_csc_pd_empty, tests_run);
     mu_run_test(test_BTDA_matrices_spd_pd, tests_run);
     mu_run_test(test_BTDA_matrices_pd_spd, tests_run);
+    mu_run_test(test_BTDA_matrices_csr_pd_tiled, tests_run);
     mu_run_test(test_BTA_pd_csc_basic, tests_run);
     mu_run_test(test_BTA_pd_csc_partial_and_excluded_cols, tests_run);
     mu_run_test(test_BTA_pd_csc_empty, tests_run);
