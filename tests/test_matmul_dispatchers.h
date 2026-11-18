@@ -3286,8 +3286,9 @@ const char *test_BA_sparse_matrices_csc_A(void)
     mu_assert("sparse x sparse built a CSC mirror",
               ((sparse_matrix *) B)->csc_cache == NULL &&
                   ((sparse_matrix *) A)->csc_cache == NULL);
-    mu_assert("sparse x sparse C has no accumulator",
-              ((sparse_matrix *) C)->bound_dwork != NULL);
+    mu_assert("sparse x sparse C has a plan or the accumulator",
+              (((sparse_matrix *) C)->bound_iwork != NULL) !=
+                  (((sparse_matrix *) C)->bound_dwork != NULL));
 
     free_matrix(C);
     free_matrix(A);
@@ -3608,10 +3609,12 @@ static matrix *sk_kron(matrix *A, int p)
     return new_sparse_matrix(K);
 }
 
-/* No CSC mirror is involved: C carries the accumulator, a sparse J keeps none. */
+/* No CSC mirror is involved: C carries a plan or the accumulator, a sparse J
+   keeps none. */
 static int sk_no_mirror(matrix *J, matrix *C)
 {
-    if (((sparse_matrix *) C)->bound_dwork == NULL) return 0;
+    const sparse_matrix *sm_C = (const sparse_matrix *) C;
+    if ((sm_C->bound_iwork != NULL) == (sm_C->bound_dwork != NULL)) return 0;
     if (J->kind == MATRIX_SPARSE && ((sparse_matrix *) J)->csc_cache != NULL)
         return 0;
     return 1;

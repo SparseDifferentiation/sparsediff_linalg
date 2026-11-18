@@ -21,6 +21,7 @@
 #include "sparsediff_linalg/tracked_alloc.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 CSR_matrix *gustavson_alloc(const sparse_rows *L, int blocks, const CSR_matrix *A)
 {
@@ -136,6 +137,94 @@ void gustavson_fill_values(const sparse_rows *L, int blocks, const double *d,
             for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
             {
                 C->x[jj] = acc[C->i[jj]];
+            }
+        }
+    }
+}
+
+int *gustavson_plan_alloc(const sparse_rows *L, int blocks, const CSR_matrix *A,
+                          const CSR_matrix *C, size_t max_terms)
+{
+    int n_L = A->m / blocks;
+    int i, k, r, b, ii, jj;
+    assert(C->n == A->n && C->m == L->m * blocks && A->m == n_L * blocks);
+
+    /* Count the terms, and give up as soon as there are too many. This reads
+       only the row lengths of A. */
+    size_t terms = 0;
+    for (b = 0; b < blocks; b++)
+    {
+        for (r = 0; r < L->m; r++)
+        {
+            for (ii = L->p[r]; ii < L->p[r + 1]; ii++)
+            {
+                k = L->i[ii] + b * n_L;
+                terms += (size_t) (A->p[k + 1] - A->p[k]);
+            }
+            if (terms > max_terms)
+            {
+                return NULL;
+            }
+        }
+    }
+    if (terms == 0)
+    {
+        return NULL;
+    }
+
+    int *plan = (int *) sp_malloc(terms * sizeof(int));
+
+    /* pos[j]: position in C->x of column j of the current row of C. Only the
+       columns of the current row are read, so no reset is needed. */
+    int *pos = (int *) sp_malloc(A->n * sizeof(int));
+    size_t t = 0;
+    for (b = 0; b < blocks; b++)
+    {
+        for (r = 0; r < L->m; r++)
+        {
+            i = b * L->m + r;
+            for (jj = C->p[i]; jj < C->p[i + 1]; jj++)
+            {
+                pos[C->i[jj]] = jj;
+            }
+
+            for (ii = L->p[r]; ii < L->p[r + 1]; ii++)
+            {
+                k = L->i[ii] + b * n_L;
+                for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
+                {
+                    plan[t++] = pos[A->i[jj]];
+                }
+            }
+        }
+    }
+    assert(t == terms);
+    sp_free(pos);
+
+    return plan;
+}
+
+void gustavson_fill_values_planned(const sparse_rows *L, int blocks, const double *d,
+                                   const CSR_matrix *A, const int *plan,
+                                   CSR_matrix *C)
+{
+    int n_L = A->m / blocks;
+    int k, r, b, ii, jj;
+    assert(C->n == A->n && C->m == L->m * blocks && A->m == n_L * blocks);
+
+    memset(C->x, 0, C->nnz * sizeof(double));
+    for (b = 0; b < blocks; b++)
+    {
+        for (r = 0; r < L->m; r++)
+        {
+            for (ii = L->p[r]; ii < L->p[r + 1]; ii++)
+            {
+                k = L->i[ii] + b * n_L;
+                double v = (d != NULL) ? L->x[ii] * d[k] : L->x[ii];
+                for (jj = A->p[k]; jj < A->p[k + 1]; jj++)
+                {
+                    C->x[*plan++] += v * A->x[jj];
+                }
             }
         }
     }

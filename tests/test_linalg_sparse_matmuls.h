@@ -642,6 +642,161 @@ const char *test_gustavson_kron_matches_legacy(void)
     return 0;
 }
 
+/* ---- the plan (gustavson_plan_alloc / gustavson_fill_values_planned) ---- */
+
+/* number of product terms of C = kron(I_blocks, L) A */
+static size_t lsm_count_terms(const sparse_rows *L, int blocks, const CSR_matrix *A)
+{
+    int n_L = A->m / blocks;
+    size_t terms = 0;
+    for (int b = 0; b < blocks; b++)
+    {
+        for (int ii = L->p[0]; ii < L->p[L->m]; ii++)
+        {
+            int k = L->i[ii] + b * n_L;
+            terms += (size_t) (A->p[k + 1] - A->p[k]);
+        }
+    }
+    return terms;
+}
+
+/* The planned fill gives the same bits as the accumulator fill, for the first
+   fill and for a refill after the values changed. Lm is blocks' L (m_L x n_L),
+   A has blocks * n_L rows. Frees Lm and A. */
+static const char *lsm_plan_vs_scratch(CSR_matrix *Lm, int blocks, CSR_matrix *A,
+                                       int use_d)
+{
+    sparse_rows L = lsm_rows(Lm);
+    const char *err = NULL;
+    size_t terms = lsm_count_terms(&L, blocks, A);
+
+    CSR_matrix *C = gustavson_alloc(&L, blocks, A);
+    int *plan = gustavson_plan_alloc(&L, blocks, A, C, terms);
+    double *acc = (double *) sp_malloc((A->n > 0 ? A->n : 1) * sizeof(double));
+    double *ref = (double *) sp_malloc((C->nnz > 0 ? C->nnz : 1) * sizeof(double));
+    double *d = (double *) sp_malloc((A->m > 0 ? A->m : 1) * sizeof(double));
+    for (int k = 0; k < A->m; k++)
+    {
+        d[k] = 0.5 + 0.01 * k;
+    }
+
+    if ((plan != NULL) != (terms > 0))
+    {
+        err = "plan: should exist exactly when there are terms";
+    }
+
+    for (int round = 0; err == NULL && plan != NULL && round < 2; round++)
+    {
+        if (round == 1)
+        {
+            for (int ii = 0; ii < A->nnz; ii++) A->x[ii] = 1.0 - 2.0 * A->x[ii];
+            for (int ii = 0; ii < Lm->nnz; ii++) Lm->x[ii] *= -0.75;
+        }
+        gustavson_fill_values(&L, blocks, use_d ? d : NULL, A, acc, C);
+        memcpy(ref, C->x, C->nnz * sizeof(double));
+        memset(C->x, 0xff, C->nnz * sizeof(double)); /* garbage */
+        gustavson_fill_values_planned(&L, blocks, use_d ? d : NULL, A, plan, C);
+        if (memcmp(ref, C->x, C->nnz * sizeof(double)) != 0)
+        {
+            err = "plan: planned fill differs from accumulator fill";
+        }
+    }
+
+    sp_free(d);
+    sp_free(ref);
+    sp_free(acc);
+    sp_free(plan);
+    free_CSR_matrix(C);
+    free_CSR_matrix(A);
+    free_CSR_matrix(Lm);
+    return err;
+}
+
+const char *test_gustavson_plan_matches_accumulator(void)
+{
+    srand(11);
+    const char *err = NULL;
+
+    /* several shapes and densities, with and without D */
+    double dens[4] = {0.02, 0.1, 0.3, 0.8};
+    for (int q = 0; err == NULL && q < 4; q++)
+    {
+        err = lsm_plan_vs_scratch(new_csr_random(25, 30, dens[q]), 1,
+                                  new_csr_random(30, 40, dens[q]), q % 2);
+        if (err == NULL)
+        {
+            err = lsm_plan_vs_scratch(new_csr_random(40, 12, dens[q]), 1,
+                                      new_csr_random(12, 9, dens[3 - q]), 1);
+        }
+    }
+    mu_assert(err, err == NULL);
+
+    /* blocks > 1 */
+    err = lsm_plan_vs_scratch(new_csr_random(7, 10, 0.3), 3,
+                              new_csr_random(30, 25, 0.2), 0);
+    mu_assert(err, err == NULL);
+    err = lsm_plan_vs_scratch(new_csr_random(6, 5, 0.5), 4,
+                              new_csr_random(20, 8, 0.4), 1);
+    mu_assert(err, err == NULL);
+
+    /* a dense column (many terms on one entry), empty rows and columns */
+    err = lsm_plan_vs_scratch(new_csr_random_ex(30, 20, 0.1, 4, 5, 3), 1,
+                              new_csr_random_ex(20, 15, 0.1, 2, 7, 6), 1);
+    mu_assert(err, err == NULL);
+
+    /* no terms at all: L and A are nonzero but never meet, and both empty */
+    err = lsm_plan_vs_scratch(new_csr_random_ex(8, 6, 0.0, 2, -1, -1), 1,
+                              new_csr_random_ex(6, 5, 0.0, -1, -1, -1), 0);
+    mu_assert(err, err == NULL);
+    err = lsm_plan_vs_scratch(new_csr_random_ex(8, 6, 0.0, -1, -1, -1), 1,
+                              new_csr_random_ex(6, 5, 0.0, -1, -1, -1), 0);
+    mu_assert(err, err == NULL);
+    return 0;
+}
+
+/* gustavson_plan_alloc returns a plan up to max_terms terms and NULL above. */
+const char *test_gustavson_plan_cap(void)
+{
+    srand(12);
+    CSR_matrix *Lm = new_csr_random(20, 15, 0.3);
+    CSR_matrix *A = new_csr_random(15, 18, 0.3);
+    sparse_rows L = lsm_rows(Lm);
+    size_t terms = lsm_count_terms(&L, 1, A);
+    mu_assert("plan cap: fixture has no terms", terms > 1);
+
+    CSR_matrix *C = gustavson_alloc(&L, 1, A);
+    int *at_cap = gustavson_plan_alloc(&L, 1, A, C, terms);
+    int *below_cap = gustavson_plan_alloc(&L, 1, A, C, terms - 1);
+    int *zero_cap = gustavson_plan_alloc(&L, 1, A, C, 0);
+    mu_assert("plan cap: no plan at max_terms == terms", at_cap != NULL);
+    mu_assert("plan cap: plan above max_terms", below_cap == NULL);
+    mu_assert("plan cap: plan with max_terms == 0", zero_cap == NULL);
+
+    /* every entry of the plan is a position in the right row of C */
+    size_t t = 0;
+    int ok = 1;
+    for (int i = 0; i < Lm->m; i++)
+    {
+        for (int ii = Lm->p[i]; ii < Lm->p[i + 1]; ii++)
+        {
+            int k = Lm->i[ii];
+            for (int jj = A->p[k]; jj < A->p[k + 1]; jj++, t++)
+            {
+                int pos = at_cap[t];
+                ok = ok && pos >= C->p[i] && pos < C->p[i + 1] &&
+                     C->i[pos] == A->i[jj];
+            }
+        }
+    }
+    mu_assert("plan cap: wrong plan entry", ok && t == terms);
+
+    sp_free(at_cap);
+    free_CSR_matrix(C);
+    free_CSR_matrix(A);
+    free_CSR_matrix(Lm);
+    return 0;
+}
+
 /* Test block_left_multiply_vec with single block: y = A @ x */
 const char *test_block_left_multiply_vec_single_block(void)
 {

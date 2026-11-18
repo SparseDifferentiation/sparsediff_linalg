@@ -127,7 +127,7 @@ matrix *BA_sparse_kron_matrices_alloc(const matrix *A, int p, matrix *J)
     assert(A->kind == MATRIX_SPARSE && J->m == p * A->n);
     const CSR_matrix *a = ((const sparse_matrix *) A)->csr;
     sparse_rows L = {a->p, a->i, a->x, a->m};
-    return new_sparse_matrix_dwork(gustavson_alloc(&L, p, J->to_csr(J)));
+    return sparse_product_alloc(&L, p, J->to_csr(J));
 }
 
 void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
@@ -137,9 +137,7 @@ void BA_sparse_kron_matrices_fill_values(const matrix *A, int p, matrix *J,
     assert(J->m == p * A->n);
     const CSR_matrix *a = ((const sparse_matrix *) A)->csr;
     sparse_rows L = {a->p, a->i, a->x, a->m};
-    sparse_matrix *sm = (sparse_matrix *) C;
-    assert(sm->bound_dwork != NULL);
-    gustavson_fill_values(&L, p, NULL, J->to_csr(J), sm->bound_dwork, sm->csr);
+    sparse_product_fill_values(&L, p, NULL, J->to_csr(J), C);
     matrix_values_changed(C);
 }
 

@@ -169,8 +169,7 @@ static matrix *BA_sparse_matrices_alloc(const sparse_matrix *B, matrix *A)
 
     /* A is sparse */
     sparse_rows L = {B->csr->p, B->csr->i, B->csr->x, B->csr->m};
-    return new_sparse_matrix_dwork(
-        gustavson_alloc(&L, 1, ((const sparse_matrix *) A)->csr));
+    return sparse_product_alloc(&L, 1, ((const sparse_matrix *) A)->csr);
 }
 
 static void BA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix *A,
@@ -191,10 +190,7 @@ static void BA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix 
 
     /* A is sparse */
     sparse_rows L = {B->csr->p, B->csr->i, B->csr->x, B->csr->m};
-    sparse_matrix *sm_C = (sparse_matrix *) C;
-    assert(sm_C->bound_dwork != NULL);
-    gustavson_fill_values(&L, 1, NULL, ((const sparse_matrix *) A)->csr,
-                          sm_C->bound_dwork, sm_C->csr);
+    sparse_product_fill_values(&L, 1, NULL, ((const sparse_matrix *) A)->csr, C);
 }
 
 /* C = B A for a permuted_dense or sparse B; a stacked_pd B asserts. */
@@ -351,8 +347,10 @@ static matrix *BTA_sparse_matrices_alloc(const sparse_matrix *B, matrix *A)
     }
 
     /* A is sparse */
-    const sparse_matrix *sm_A = (const sparse_matrix *) A;
-    return new_sparse_matrix_dwork(BTA_alloc(sm_A->csr, B->csc_cache));
+    const CSC_matrix *B_csc = B->csc_cache;
+    assert(A->m == B_csc->m);
+    sparse_rows L = {B_csc->p, B_csc->i, B_csc->x, B_csc->n};
+    return sparse_product_alloc(&L, 1, ((const sparse_matrix *) A)->csr);
 }
 
 static void BTDA_sparse_matrices_fill_values(const sparse_matrix *B, const double *d,
@@ -372,10 +370,8 @@ static void BTDA_sparse_matrices_fill_values(const sparse_matrix *B, const doubl
     }
 
     /* A is sparse */
-    sparse_matrix *sm_C = (sparse_matrix *) C;
-    assert(sm_C->bound_dwork != NULL);
-    BTDA_fill_values(((const sparse_matrix *) A)->csr, B_csc, d, sm_C->bound_dwork,
-                     sm_C->csr);
+    sparse_rows L = {B_csc->p, B_csc->i, B_csc->x, B_csc->n};
+    sparse_product_fill_values(&L, 1, d, ((const sparse_matrix *) A)->csr, C);
 }
 
 static void BTA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix *A,
@@ -395,10 +391,8 @@ static void BTA_sparse_matrices_fill_values(const sparse_matrix *B, const matrix
     }
 
     /* A is sparse */
-    sparse_matrix *sm_C = (sparse_matrix *) C;
-    assert(sm_C->bound_dwork != NULL);
-    BTDA_fill_values(((const sparse_matrix *) A)->csr, B_csc, NULL,
-                     sm_C->bound_dwork, sm_C->csr);
+    sparse_rows L = {B_csc->p, B_csc->i, B_csc->x, B_csc->n};
+    sparse_product_fill_values(&L, 1, NULL, ((const sparse_matrix *) A)->csr, C);
 }
 
 void free_matrix(matrix *m)
@@ -506,7 +500,9 @@ matrix *ATA_matrices_alloc(matrix *A)
     /* A is sparse_matrix; the alloc only needs the CSC mirror's structure */
     sparse_matrix *sm = (sparse_matrix *) A;
     sparse_matrix_ensure_csc_cache(sm);
-    return new_sparse_matrix_dwork(ATA_alloc(sm->csc_cache, sm->csr));
+    const CSC_matrix *A_csc = sm->csc_cache;
+    sparse_rows L = {A_csc->p, A_csc->i, A_csc->x, A_csc->n};
+    return sparse_product_alloc(&L, 1, sm->csr);
 }
 
 void ATDA_matrices_fill_values(const matrix *A, const double *d, matrix *C)
@@ -523,10 +519,9 @@ void ATDA_matrices_fill_values(const matrix *A, const double *d, matrix *C)
     else
     {
         /* A is sparse_matrix */
-        sparse_matrix *sm_C = (sparse_matrix *) C;
-        assert(sm_C->bound_dwork != NULL);
-        ATDA_fill_values(sparse_csc_fresh(A), d, ((const sparse_matrix *) A)->csr,
-                         sm_C->bound_dwork, sm_C->csr);
+        const CSC_matrix *A_csc = sparse_csc_fresh(A);
+        sparse_rows L = {A_csc->p, A_csc->i, A_csc->x, A_csc->n};
+        sparse_product_fill_values(&L, 1, d, ((const sparse_matrix *) A)->csr, C);
     }
     matrix_values_changed(C);
 }

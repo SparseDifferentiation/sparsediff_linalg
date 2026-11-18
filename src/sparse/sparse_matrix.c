@@ -261,11 +261,36 @@ matrix *new_sparse_matrix(CSR_matrix *A)
     return &sm->base;
 }
 
-matrix *new_sparse_matrix_dwork(CSR_matrix *A)
+matrix *sparse_product_alloc(const sparse_rows *L, int blocks, const CSR_matrix *A)
 {
-    matrix *C = new_sparse_matrix(A);
-    ((sparse_matrix *) C)->bound_dwork = (double *) sp_malloc(C->n * sizeof(double));
+    CSR_matrix *csr = gustavson_alloc(L, blocks, A);
+    matrix *C = new_sparse_matrix(csr);
+    sparse_matrix *sm = (sparse_matrix *) C;
+
+    size_t max_terms = (size_t) GUSTAVSON_PLAN_MAX_RATIO * (size_t) csr->nnz;
+    sm->bound_iwork = gustavson_plan_alloc(L, blocks, A, csr, max_terms);
+    if (sm->bound_iwork == NULL)
+    {
+        /* no plan: the fill needs the accumulator instead */
+        sm->bound_dwork = (double *) sp_malloc(C->n * sizeof(double));
+    }
     return C;
+}
+
+void sparse_product_fill_values(const sparse_rows *L, int blocks, const double *d,
+                                const CSR_matrix *A, matrix *C)
+{
+    assert(C->kind == MATRIX_SPARSE);
+    sparse_matrix *sm = (sparse_matrix *) C;
+    if (sm->bound_iwork != NULL)
+    {
+        gustavson_fill_values_planned(L, blocks, d, A, sm->bound_iwork, sm->csr);
+    }
+    else
+    {
+        assert(sm->bound_dwork != NULL);
+        gustavson_fill_values(L, blocks, d, A, sm->bound_dwork, sm->csr);
+    }
 }
 
 matrix *new_sparse_matrix_alloc(int m, int n, int nnz)
